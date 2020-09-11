@@ -4,6 +4,8 @@
 
 function AconfApply() {
 	local modified=n
+  aconfmgr_action=apply
+  aconfmgr_run_mode=state
 
 	function PrintFileProperty() {
 		local kind="$1"
