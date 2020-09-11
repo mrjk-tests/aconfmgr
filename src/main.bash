@@ -30,6 +30,7 @@ function Usage() {
 	printf 'Supported options:\n'
 	printf '  -h, --help               Print this message\n'
 	printf '  -c, --config DIR         Set the path to your configuration directory\n'
+	printf '  -n, --dry-mode           Prevent any file and package modifications\n'
 	printf '      --skip-inspection    Skip the system inspection step\n'
 	printf '                           (reuse previous results)\n'
 	printf '      --skip-checksums     Skip checksum verification of installed packages\n'
@@ -77,6 +78,10 @@ function Main() {
 				config_dir="$2"
 				shift 2
 				;;
+	    -n|--dry-mode)
+        dry_mode=y
+        shift
+        ;;
 			--skip-inspection)
 				skip_inspection=y
 				shift

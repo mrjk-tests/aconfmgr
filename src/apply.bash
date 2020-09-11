@@ -81,6 +81,11 @@ function AconfApply() {
 		local file="$1"
 		local source="$output_dir"/files/"$file"
 
+    if [[ $dry_mode == y ]]; then
+      Log 'Installing: %s... (drymode enabled)\n' "$(Color C %q "$file")"
+      return 0
+    fi
+
 		# system
 
 		local target="$file".aconfmgr-new
@@ -615,9 +620,13 @@ function AconfApply() {
 				# previously-deleted objects.
 				LogEnter 'Skipping non-empty directory %s.\n' "$(Color C "%q" "$file")"
 			else
-				LogEnter 'Deleting %s...\n' "$(Color C "%q" "$file")"
-				ParanoidConfirm ''
-				sudo rm --dir "$file"
+        if [[ $dry_mode == n ]]; then
+          LogEnter 'Deleting %s...\n' "$(Color C "%q" "$file")"
+          ParanoidConfirm ''
+          sudo rm --dir "$file"
+        else
+          LogEnter 'Deleting %s... ((drymode enabled))\n' "$(Color C "%q" "$file")"
+        fi
 			fi
 
 			local prop

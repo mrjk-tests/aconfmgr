@@ -31,6 +31,9 @@ umask $((666 - default_file_mode))
 
 aconfmgr_action=
 
+# Command line config
+dry_mode=n
+
 ####################################################################################################
 
 # Defaults
@@ -1167,6 +1170,11 @@ function AconfInstallNative() {
 	fi
 
 	local target_packages=("$@")
+  if [[ $dry_mode == y ]]; then
+    Log 'Install package: %s (drymode enabled)\n' "${target_packages[@]}"
+    return
+  fi
+
 	if [[ $prompt_mode == never ]]
 	then
 		# Some prompts default to 'no'
@@ -1186,6 +1194,10 @@ function AconfInstallForeign() {
 	fi
 
 	local target_packages=("$@")
+  if [[ $dry_mode == y ]]; then
+    Log 'Install foreign package: %s (drymode enabled)\n' "${target_packages[@]}"
+    return
+  fi
 
 	DetectAurHelper
 
