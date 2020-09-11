@@ -74,6 +74,157 @@ warn_tmp_df_threshold=$((1024*1024))  # Warn on error if free space in $tmp_dir 
 
 ####################################################################################################
 
+# GLOB: root_dist & root_config_dir
+ignore_lock=true
+ignore_parents=true
+
+AconfSource ()
+{
+  local dist_path=$1
+  local method=${2}
+  local filter=${3}
+
+  local found=false
+  local method_name='ImportState'
+  local pattern='states'
+
+  local sequential=true
+  local logsection=false
+  local log_enter=Log
+  local log_leave=:
+  local run_mode=any
+
+  # Multi use case function
+  case "$method" in
+    vars)
+      # runmode: any
+      method_name='ImportVars'
+      pattern='vars'
+      sequential=false
+      ;;
+    lib)
+      # runmode: any
+      method_name='ImportLibrary'
+      pattern='lib'
+      sequential=false
+      ;;
+    state)
+      # runmode: state
+      logsection=true
+      ;;
+    inherit)
+      # runmode: state
+      #[[ "$aconfmgr_run_mode" == "state" ]] || FatalError "You can't\n"
+      method_name='ImportInherit'
+      pattern='states'
+      run_mode=states
+      logsection=true
+
+      if $ignore_parents || [[ "$dist" == "$root_dist" ]] ; then
+        Log '%s: Ignoring parents ...\n' "$method_name"
+      else
+        Log '%s: Loading parents %s ...\n' "$method_name" "$dist"
+        IgnoreStart
+        ignore_lock=true
+      fi
+      ;;
+    setup)
+      # runmode: setup
+      method_name='ImportSetup'
+      pattern='setup'
+      sequential=true
+      logsection=true
+      run_mode=setup
+      if $ignore_parents || [[ "$dist" == "$root_dist" ]] ; then
+        Log '%s: Loading parents %s ...\n' "$method_name" "$dist"
+      else
+        Log '%s: Ignoring %s (%s)\n' "$method_name" "$(Color C "%q" "$dist/$pattern")" "$dist_path/$pattern.sh"
+        return
+      fi
+      ;;
+    *) FatalError 'Unsupported import method: %s\n' "$method" ;;
+  esac
+
+  # # Configure exec environment
+  # if [[ "$root_config_dir" == "$dist_path" ]]; then
+  #   external=false
+  # fi
+  # Configure exec environment
+  if [[ "$run_mode" != "any" ]] && [[ "$run_mode" != "$aconfmgr_run_mode" ]]; then
+    FatalError 'Impossible to import item %s/%s/%s while in %s mode\n' "$dist" "$method" "${filter:-*}" "$run_mode"
+  fi
+
+  # Apply new config
+  local old_ignore_status=$ignore_status
+  local old_config_dir="$config_dir"
+  config_dir="$dist_path"
+
+  # Enable log section
+  if $logsection; then
+    log_enter=LogEnter
+    log_leave=LogLeave
+  fi
+
+  # Lookup file
+  if [[ -f "$dist_path/$pattern/$filter.sh" ]]; then
+    $log_enter '%s: Direct match: %s (%s)\n' "$method_name" "$(Color C "%q" "$dist/$pattern/$filter")" "$dist_path/$pattern/$filter.sh"
+    # shellcheck source=/dev/null
+    source "$dist_path/$pattern/$filter.sh"
+    found=true
+    $log_leave '%s: %s done.\n' "$method_name" "$(Color C "%q" "$dist/$pattern/$filter")" 
+
+  elif [[ -z "$filter" ]]; then
+    if [[ -f "$dist_path/$pattern.sh" ]]; then
+      $log_enter '%s: Main match: %s (%s)\n' "$method_name" "$(Color C "%q" "$dist/$pattern")" "$dist_path/$pattern.sh"
+      # shellcheck source=/dev/null
+      source "$dist_path/$pattern.sh"
+      found=true
+      $log_leave '%s: %s done.\n' "$method_name" "$(Color C "%q" "$dist/$pattern.sh")"
+
+    elif [[ -d "$dist_path/$pattern/" ]]; then
+      found=true
+      if $sequential; then
+        for i in "$dist_path/$pattern"/[0-9]*.sh ; do
+          [[ -f "$i" ]] || continue
+          $log_enter '%s: Ordered match: %s (ordered=%s)\n' "$method_name" "$(Color C "%q" "$dist/$pattern/$i")" "$dist_path/$pattern/$i.sh"
+          # shellcheck source=/dev/null
+          source "$i"
+          found=true
+          $log_leave '%s: %s done.\n' "$method_name" "$(Color C "%q" "$dist/$pattern/$i")"
+        done
+      else
+        for i in "$dist_path/$pattern"/*.sh ; do
+          local name=${i##*/}
+          name=${name%%.sh}
+          [[ -f "$i" ]] || continue
+          $log_enter '%s: All match: %s (%s)\n' "$method_name" "$(Color C "%q" "$dist/$pattern/$name")" "$i"
+          # shellcheck source=/dev/null
+          source "$i"
+          found=true
+          $log_leave '%s: %s done.\n' "$method_name" "$(Color C "%q" "$i")"
+        done
+      fi
+    fi
+  fi
+
+  # Restore config
+  config_dir="$old_config_dir"
+  if "$ignore_lock"; then
+    ignore_lock=false
+    if [[ "$old_ignore_status" != "$ignore_status" ]]; then
+      if "$old_ignore_status"; then
+        IgnoreStart
+      else
+        IgnoreStop
+      fi
+    fi
+  fi
+  $found
+}
+
+
+####################################################################################################
+
 function LogLeaveDirStats() {
 	local dir="$1"
 	Log 'Finalizing...\r'
