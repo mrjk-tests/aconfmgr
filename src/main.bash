@@ -30,9 +30,10 @@ function Usage() {
 	printf 'Supported options:\n'
 	printf '  -h, --help               Print this message\n'
 	printf '  -c, --config DIR         Set the path to your configuration directory\n'
-	printf '      --skip-inspection    Skip the system inspection step\n'
+	printf '  -P, --skip-parents       Skip parent steps when inherited\n'
+	printf '  -I, --skip-inspection    Skip the system inspection step\n'
 	printf '                           (reuse previous results)\n'
-	printf '      --skip-checksums     Skip checksum verification of installed packages\n'
+	printf '  -C, --skip-checksums     Skip checksum verification of installed packages\n'
 	printf '                           (faster and generally safe,\n'
 	printf '                            but may miss changes in exceptional circumstances)\n'
 	printf '      --aur-helper HELPER  Set AUR helper to use for installing foreign packages\n'
@@ -77,11 +78,15 @@ function Main() {
 				config_dir="$2"
 				shift 2
 				;;
-			--skip-inspection)
+			-P|--skip-parents)
+				ignore_parents=true
+				shift
+				;;
+			-I|--skip-inspection)
 				skip_inspection=y
 				shift
 				;;
-			--skip-checksums)
+			-C|--skip-checksums)
 				skip_checksums=y
 				shift
 				;;
