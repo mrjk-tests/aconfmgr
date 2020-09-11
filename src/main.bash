@@ -31,7 +31,7 @@ function Usage() {
 	printf '  -h, --help               Print this message\n'
 	printf '  -d, --dist-dir DIR       Add distro lookup path directory\n'
 	printf '  -n, --dist-name NAME     Set the distro name, default is hostname or local\n'
-	printf '  -n, --dry-mode           Prevent any file and package modifications\n'
+	printf '  -N, --dry-mode           Prevent any file and package modifications\n'
 	printf '  -P, --skip-parents       Skip parent steps when inherited\n'
 	printf '  -I, --skip-inspection    Skip the system inspection step\n'
 	printf '                           (reuse previous results)\n'
@@ -89,8 +89,8 @@ function Main() {
 				config_name="$2"
 				shift 2
 				;;
-	    -n|--dry-mode)
-        dry_mode=y
+	    -N|--dry-mode)
+        dry_mode=true
         shift
         ;;
 			-P|--skip-parents)

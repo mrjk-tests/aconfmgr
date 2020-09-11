@@ -33,7 +33,7 @@ aconfmgr_action=
 aconfmgr_run_mode=
 
 # Command line config
-dry_mode=n
+dry_mode=false
 
 ####################################################################################################
 
@@ -1373,7 +1373,8 @@ function AconfInstallNative() {
 	fi
 
 	local target_packages=("$@")
-  if [[ $dry_mode == y ]]; then
+  if $dry_mode
+  then
     Log 'Install package: %s (drymode enabled)\n' "${target_packages[@]}"
     return
   fi
@@ -1397,7 +1398,8 @@ function AconfInstallForeign() {
 	fi
 
 	local target_packages=("$@")
-  if [[ $dry_mode == y ]]; then
+  if $dry_mode
+  then
     Log 'Install foreign package: %s (drymode enabled)\n' "${target_packages[@]}"
     return
   fi

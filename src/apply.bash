@@ -83,7 +83,8 @@ function AconfApply() {
 		local file="$1"
 		local source="$output_dir"/files/"$file"
 
-    if [[ $dry_mode == y ]]; then
+    if $dry_mode
+    then
       Log 'Installing: %s... (drymode enabled)\n' "$(Color C %q "$file")"
       return 0
     fi
@@ -622,7 +623,8 @@ function AconfApply() {
 				# previously-deleted objects.
 				LogEnter 'Skipping non-empty directory %s.\n' "$(Color C "%q" "$file")"
 			else
-        if [[ $dry_mode == n ]]; then
+        if $dry_mode
+        then
           LogEnter 'Deleting %s...\n' "$(Color C "%q" "$file")"
           ParanoidConfirm ''
           sudo rm --dir "$file"
