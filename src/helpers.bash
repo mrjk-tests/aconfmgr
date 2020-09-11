@@ -2,6 +2,8 @@
 
 # This file contains helper functions for the generated configuration scripts.
 
+####################################################################################################
+
 #
 # AddPackage [--foreign] PACKAGE...
 #
@@ -72,6 +74,8 @@ function IgnorePackage() {
 		ignore_packages+=("$@")
 	fi
 }
+
+####################################################################################################
 
 #
 # CopyFile PATH [MODE [OWNER [GROUP]]]
@@ -283,6 +287,8 @@ function IgnorePath() {
 	ignore_paths+=("$@")
 }
 
+####################################################################################################
+
 #
 # Load TYPE [FILTER]
 #
@@ -303,7 +309,6 @@ function Load ()
     FatalError 'Load: Failed to source: %s\n' "$@"
     }
 }
-
 
 #
 # Require DIST [URL]
@@ -336,7 +341,6 @@ function Require ()
   Log 'Require: %s dist (%s)\n' "$dist" "$dist_list"
   AconfSource "$dist" vars || true
 
-
 }
 
 #
@@ -354,6 +358,7 @@ function Require ()
 # - setup: only on setup mode
 # The argument FILTER is usually a filename
 #
+
 function Import ()
 {
   AconfSource "$@" || {
@@ -361,5 +366,85 @@ function Import ()
     }
 }
 
+####################################################################################################
+
+#
+# IgnoreStart [LOCK]
+#
+# Will ignore package and files until next IgnoreStop directive.
+# Set the LOCK to true if you want to force Ignore mode.
+#
+
+ignore_fn_pkg="AddPackage RemovePackage"
+ignore_fn_files="\
+CopyFile CopyFileTo CreateFile \
+CreateLink RemoveFile \
+SetFileProperty TrackFile \
+"
+
+function IgnoreStart() {
+	local lock="${1:-false}"
+
+  if [[ "$ignore_lock" != "$lock" ]]
+  then
+    #Log 'Reverse: Locked as its in import\n'
+    return
+  elif "$ignore_status"
+  then
+    #Log 'Reverse: Already On\n'
+    return
+  fi
+
+  # Generate function code
+  ignore_old_fn=$(
+    IFS=' '
+    for fn in $ignore_fn_pkg $ignore_fn_file ; do
+      declare -f "$fn" || true
+    done
+  )
+  ignore_new_fn=$(
+    IFS=' '
+    for fn in $ignore_fn_pkg; do
+      # shellcheck disable=SC2016
+      printf '%s () { IgnorePackage "$1"; }\n' "$fn"
+    done
+    for fn in $ignore_fn_file; do
+      # shellcheck disable=SC2016
+      printf '%s () { IgnorePath "$1"; }\n' "$fn"
+    done
+  )
+
+  # Override functions
+  eval "$ignore_new_fn"
+  ignore_lock=$lock
+  ignore_status=true
+}
+
+#
+# IgnoreStop [LOCK]
+#
+# Will reconsider package and files until next IgnoreStart directive.
+# Set the LOCK to true if you want to force Ignore mode.
+#
+
+function IgnoreStop() {
+	local lock="${1:-0}"
+
+  if [[ "$ignore_lock" != "$lock" ]]
+  then
+    #Log 'Reverse: Locked as its in import\n'
+    return
+  elif "$ignore_status"
+  then
+    #Log 'Reverse: Already Off\n'
+    return
+  fi
+
+  # Override functions
+  eval "$ignore_old_fn"
+  ignore_lock=false
+  ignore_status=false
+
+}
 
 : # include in coverage
