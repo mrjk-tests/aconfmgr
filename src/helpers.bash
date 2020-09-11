@@ -141,6 +141,46 @@ function CopyFileTo() {
 	used_files["$src_file"]=y
 }
 
+
+#
+# TrackFile SRC-PATH [MODE [OWNER [GROUP]]]
+#
+# Copies only if exists a file from the "files" subdirectory to the output.
+# If the file does not exists, it simply ignore it.
+#
+# The specified path should be relative to the root of the "files" subdirectory.
+#
+
+function TrackFile() {
+	local src_file="$1"
+	local dst_file="$src_file"
+	local mode="${3:-}"
+	local owner="${4:-}"
+	local group="${5:-}"
+
+	if [[ "$src_file" != /* ]]
+	then
+		Log '%s: Source file path %s is not absolute.\n' \
+			"$(Color Y "Warning")" \
+			"$(Color C "%q" "$src_file")"
+		config_warnings+=1
+	fi
+
+  if [[ -e "$config_dir"/files/"$src_file" ]]; then
+	  mkdir --parents "$(dirname "$output_dir"/files/"$dst_file")"
+
+	  cp --no-dereference\
+	     "$config_dir"/files/"$src_file"\
+	     "$output_dir"/files/"$dst_file"
+
+	  SetFileProperty "$dst_file" mode  "$mode"
+	  SetFileProperty "$dst_file" owner "$owner"
+	  SetFileProperty "$dst_file" group "$group"
+  fi
+
+	used_files["$src_file"]=y
+}
+
 #
 # CreateFile PATH [MODE [OWNER [GROUP]]]
 #
