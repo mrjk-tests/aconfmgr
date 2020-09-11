@@ -29,7 +29,8 @@ function Usage() {
 	echo
 	printf 'Supported options:\n'
 	printf '  -h, --help               Print this message\n'
-	printf '  -c, --config DIR         Set the path to your configuration directory\n'
+	printf '  -d, --dist-dir DIR       Add distro lookup path directory\n'
+	printf '  -n, --dist-name NAME     Set the distro name, default is hostname or local\n'
 	printf '  -P, --skip-parents       Skip parent steps when inherited\n'
 	printf '  -I, --skip-inspection    Skip the system inspection step\n'
 	printf '                           (reuse previous results)\n'
@@ -74,8 +75,17 @@ function Main() {
 				Usage
 				Exit 0
 				;;
-			-c|--config)
-				config_dir="$2"
+			-d|--dist-dir)
+				dist_dir="$2"
+				shift 2
+
+        if [[ ":${dist_paths-}:" != *":$dist_dir:"* ]]
+        then
+          dist_paths="$dist_dir:$dist_paths"
+        fi
+				;;
+			-n|--dist-name)
+				config_name="$2"
 				shift 2
 				;;
 			-P|--skip-parents)
@@ -165,6 +175,14 @@ function Main() {
 			UsageError "Unrecognized --color value: %s" "$color"
 			;;
 	esac
+
+  # Setup config
+  config_dir="$dist_dir/$config_name"
+  config_name="${config_name:-${config_dir##*/}}"
+
+  # Save initial distro
+  root_dir=${config_dir}
+  root_name=${config_name}
 
 	case "$aconfmgr_action" in
 		save)
