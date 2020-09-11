@@ -323,15 +323,6 @@ function IgnorePath() {
 	ignore_paths+=("$@")
 }
 
-ignore_lock=0
-ignore_status=n
-ignore_fn="\
-AddPackage CopyFile CopyFileTo CreateFile \
-CreateLink RemoveFile RemovePackage \
-SetFileProperty TrackFile \
-"
-
-
 #
 # IgnoreStart [LOCK]
 #
@@ -341,15 +332,21 @@ SetFileProperty TrackFile \
 # declarations.
 #
 
+ignore_fn_pkg=" AddPackage RemovePackage"
+ignore_fn_files="\
+CopyFile CopyFileTo CreateFile \
+CreateLink RemoveFile \
+SetFileProperty TrackFile \
+"
+
 function IgnoreStart() {
-  set -x
 	local lock="${1:-0}"
 
-  if [[ $ignore_lock != "$lock" ]]
+  if [[ "$ignore_lock" != "$lock" ]]
   then
     #Log 'Reverse: Locked as its in import\n'
     return
-  elif [[ $ignore_status == y ]]
+  elif "$ignore_status"
   then
     #Log 'Reverse: Already On\n'
     return
@@ -358,21 +355,26 @@ function IgnoreStart() {
   # Generate function code
   ignore_old_fn=$(
     IFS=' '
-    for fn in $ignore_fn; do
+    for fn in $ignore_fn_pkg $ignore_fn_file ; do
       declare -f "$fn" || true
     done
   )
   ignore_new_fn=$(
     IFS=' '
-    for fn in $ignore_fn; do
+    for fn in $ignore_fn_pkg; do
       # shellcheck disable=SC2016
       printf '%s () { IgnorePackage "$1"; }\n' "$fn"
     done
+    for fn in $ignore_fn_file; do
+      # shellcheck disable=SC2016
+      printf '%s () { IgnorePath "$1"; }\n' "$fn"
+    done
   )
-  set +x
+
+  # Override functions
   eval "$ignore_new_fn"
   ignore_lock=$lock
-  ignore_status=y
+  ignore_status=true
 }
 
 #
@@ -387,19 +389,20 @@ function IgnoreStart() {
 function IgnoreStop() {
 	local lock="${1:-0}"
 
-  if [[ $ignore_lock != "$lock" ]]
+  if [[ "$ignore_lock" != "$lock" ]]
   then
     #Log 'Reverse: Locked as its in import\n'
     return
-  elif [[ $ignore_status == n ]]
+  elif "$ignore_status"
   then
     #Log 'Reverse: Already Off\n'
     return
   fi
 
+  # Override functions
   eval "$ignore_old_fn"
-  ignore_lock=0
-  ignore_status=n
+  ignore_lock=false
+  ignore_status=false
 }
 
 : # include in coverage
