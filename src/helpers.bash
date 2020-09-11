@@ -283,4 +283,83 @@ function IgnorePath() {
 	ignore_paths+=("$@")
 }
 
+#
+# Load TYPE [FILTER]
+#
+# Load specific type file.
+#
+# The argument TYPE must be one of those:
+# - vars: any
+# - lib: any
+# - state: only on state mode
+# - inherit: only on state mode
+# - setup: only on setup mode
+# The argument FILTER is usually a filename
+#
+function Load ()
+{
+  local dist=${config_dir##*/}
+  AconfSource "$dist" "$@" || {
+    FatalError 'Load: Failed to source: %s\n' "$@"
+    }
+}
+
+
+#
+# Require DIST [URL]
+#
+# Adds the specified distro to the requirements.
+#
+# The argument DIST must be a valid dir name located in dist_list.
+# The argument URL should be a valid git url (http or ssh). If the
+# distro does not exists, aconfmgr will download the repo.
+#
+function Require ()
+{
+  local dist=${1}
+  local url=${2:-}
+
+  if [[ ":$dist_list:" =~ :$dist: ]] ; then
+    Log 'Module %s already loaded (%s)\n' "$dist" "$dist_list"
+    return
+  fi
+
+  # BUG: Implement git clone !
+  local dist_path=$(AconfDistPath "$dist" || true)
+  if [[ ! -d "$dist_path" ]]; then
+  #if [[ ! -d "$dist_dir/$dist" ]]; then
+    echo "BUG git clone $url $dist_dir/$dist"
+    FatalError "Can't install repo %s\n" "$url"
+  fi
+
+  dist_list="$dist:$dist_list"
+  Log 'Require: %s dist (%s)\n' "$dist" "$dist_list"
+  AconfSource "$dist" vars || true
+
+
+}
+
+#
+# Import DIST TYPE [FILTER]
+#
+# Load specific type from any distro. DIST must have been loaded with
+# the Require directive first before being able to source a file.
+#
+# The argument DIST must be a valid dir name located in dist_list.
+# The argument TYPE must be one of those:
+# - vars: any
+# - lib: any
+# - state: only on state mode
+# - inherit: only on state mode
+# - setup: only on setup mode
+# The argument FILTER is usually a filename
+#
+function Import ()
+{
+  AconfSource "$@" || {
+    FatalError 'Import: Failed to source: %s\n' "$@"
+    }
+}
+
+
 : # include in coverage
