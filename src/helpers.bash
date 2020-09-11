@@ -323,4 +323,83 @@ function IgnorePath() {
 	ignore_paths+=("$@")
 }
 
+ignore_lock=0
+ignore_status=n
+ignore_fn="\
+AddPackage CopyFile CopyFileTo CreateFile \
+CreateLink RemoveFile RemovePackage \
+SetFileProperty TrackFile \
+"
+
+
+#
+# IgnoreStart [LOCK]
+#
+# Ignore all files and packages declarations after this statement.
+#
+# The argument should be lock code, useful to ignore other sets of 
+# declarations.
+#
+
+function IgnoreStart() {
+  set -x
+	local lock="${1:-0}"
+
+  if [[ $ignore_lock != "$lock" ]]
+  then
+    #Log 'Reverse: Locked as its in import\n'
+    return
+  elif [[ $ignore_status == y ]]
+  then
+    #Log 'Reverse: Already On\n'
+    return
+  fi
+
+  # Generate function code
+  ignore_old_fn=$(
+    IFS=' '
+    for fn in $ignore_fn; do
+      declare -f "$fn" || true
+    done
+  )
+  ignore_new_fn=$(
+    IFS=' '
+    for fn in $ignore_fn; do
+      # shellcheck disable=SC2016
+      printf '%s () { IgnorePackage "$1"; }\n' "$fn"
+    done
+  )
+  set +x
+  eval "$ignore_new_fn"
+  ignore_lock=$lock
+  ignore_status=y
+}
+
+#
+# IgnoreStop [LOCK]
+#
+# Reconsider all files and packages declarations after this statement.
+#
+# The argument should be lock code, useful to ignore other sets of 
+# declarations.
+#
+
+function IgnoreStop() {
+	local lock="${1:-0}"
+
+  if [[ $ignore_lock != "$lock" ]]
+  then
+    #Log 'Reverse: Locked as its in import\n'
+    return
+  elif [[ $ignore_status == n ]]
+  then
+    #Log 'Reverse: Already Off\n'
+    return
+  fi
+
+  eval "$ignore_old_fn"
+  ignore_lock=0
+  ignore_status=n
+}
+
 : # include in coverage
