@@ -75,11 +75,55 @@ warn_tmp_df_threshold=$((1024*1024))  # Warn on error if free space in $tmp_dir 
 
 ####################################################################################################
 
-# GLOB: root_dist & root_config_dir
-ignore_lock=true
-ignore_parents=true
+# options
+ignore_parents=false
+# internal vars
+ignore_lock=false
+ignore_status=false
 
-AconfSource ()
+function AconfDistPath ()
+{
+  local dist=$1
+
+  for path in ${dist_paths//:/$'\n'}; do
+    local dist_path="$path/$dist"
+    dist_path=$(realpath "$dist_path" || true )
+    if [[ -d "$dist_path" ]]; then
+      echo "$dist_path"
+      return
+    fi
+  done
+
+  FatalError 'Impossible to find module: %s\n' "$dist"
+}
+
+function AconfSource ()
+{
+  local dist=$1
+  local type=$2
+  local filter=${3-}
+
+  # Sanity Check
+  if ! [[ ":$dist_list:" =~ :$dist: ]] ; then
+    FatalError 'Module %s must be loaded first with a Require statement. (%s)\n' "$dist" "$dist_list"
+  fi
+
+  local dist_path=$(AconfDistPath "$dist" || true)
+  case "$type" in
+    vars)
+      # Vars does not fail if not found
+      AconfSourcePath "$dist_path" "$type" "$filter" || true ;;
+    unsorted)
+      # Does not fail if not found
+      AconfSourcePath "$dist_path" "$type" "99-unsorted" || true ;;
+    *)  #lib|state|setup|inherit)
+      # Fails by default
+      AconfSourcePath "$dist_path" "$type" "$filter" ;;
+  esac || Error 'Source: Cant find any suitable "%s/%s/%s"\n' "$dist" "$type" "${filter:-*}"
+}
+
+
+function AconfSourcePath ()
 {
   local dist_path=$1
   local method=${2}
@@ -146,19 +190,19 @@ AconfSource ()
     *) FatalError 'Unsupported import method: %s\n' "$method" ;;
   esac
 
-  # # Configure exec environment
-  # if [[ "$root_config_dir" == "$dist_path" ]]; then
-  #   external=false
-  # fi
   # Configure exec environment
   if [[ "$run_mode" != "any" ]] && [[ "$run_mode" != "$aconfmgr_run_mode" ]]; then
     FatalError 'Impossible to import item %s/%s/%s while in %s mode\n' "$dist" "$method" "${filter:-*}" "$run_mode"
   fi
 
-  # Apply new config
+  # Backup current config
   local old_ignore_status=$ignore_status
   local old_config_dir="$config_dir"
+  local old_config_name="$config_name"
+
+  # Apply new config
   config_dir="$dist_path"
+  config_name="${config_dir##*/}"
 
   # Enable log section
   if $logsection; then
@@ -210,6 +254,7 @@ AconfSource ()
 
   # Restore config
   config_dir="$old_config_dir"
+  config_name="$old_config_name"
   if "$ignore_lock"; then
     ignore_lock=false
     if [[ "$old_ignore_status" != "$ignore_status" ]]; then
