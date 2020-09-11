@@ -141,46 +141,6 @@ function CopyFileTo() {
 	used_files["$src_file"]=y
 }
 
-
-#
-# TrackFile SRC-PATH [MODE [OWNER [GROUP]]]
-#
-# Copies only if exists a file from the "files" subdirectory to the output.
-# If the file does not exists, it simply ignore it.
-#
-# The specified path should be relative to the root of the "files" subdirectory.
-#
-
-function TrackFile() {
-	local src_file="$1"
-	local dst_file="$src_file"
-	local mode="${3:-}"
-	local owner="${4:-}"
-	local group="${5:-}"
-
-	if [[ "$src_file" != /* ]]
-	then
-		Log '%s: Source file path %s is not absolute.\n' \
-			"$(Color Y "Warning")" \
-			"$(Color C "%q" "$src_file")"
-		config_warnings+=1
-	fi
-
-  if [[ -e "$config_dir"/files/"$src_file" ]]; then
-	  mkdir --parents "$(dirname "$output_dir"/files/"$dst_file")"
-
-	  cp --no-dereference\
-	     "$config_dir"/files/"$src_file"\
-	     "$output_dir"/files/"$dst_file"
-
-	  SetFileProperty "$dst_file" mode  "$mode"
-	  SetFileProperty "$dst_file" owner "$owner"
-	  SetFileProperty "$dst_file" group "$group"
-  fi
-
-	used_files["$src_file"]=y
-}
-
 #
 # CreateFile PATH [MODE [OWNER [GROUP]]]
 #
@@ -323,83 +283,83 @@ function IgnorePath() {
 	ignore_paths+=("$@")
 }
 
-ignore_lock=0
-ignore_status=n
-ignore_fn="\
-AddPackage CopyFile CopyFileTo CreateFile \
-CreateLink RemoveFile RemovePackage \
-SetFileProperty TrackFile \
-"
+#
+# Load TYPE [FILTER]
+#
+# Load specific type file.
+#
+# The argument TYPE must be one of those:
+# - vars: any
+# - lib: any
+# - state: only on state mode
+# - inherit: only on state mode
+# - setup: only on setup mode
+# The argument FILTER is usually a filename
+#
+function Load ()
+{
+  local dist=${config_dir##*/}
+  AconfSource "$dist" "$@" || {
+    FatalError 'Load: Failed to source: %s\n' "$@"
+    }
+}
 
 
 #
-# IgnoreStart [LOCK]
+# Require DIST [URL]
 #
-# Ignore all files and packages declarations after this statement.
+# Adds the specified distro to the requirements.
 #
-# The argument should be lock code, useful to ignore other sets of 
-# declarations.
+# The argument DIST must be a valid dir name located in dist_list.
+# The argument URL should be a valid git url (http or ssh). If the
+# distro does not exists, aconfmgr will download the repo.
 #
+function Require ()
+{
+  local dist=${1}
+  local url=${2:-}
 
-function IgnoreStart() {
-  set -x
-	local lock="${1:-0}"
-
-  if [[ $ignore_lock != "$lock" ]]
-  then
-    #Log 'Reverse: Locked as its in import\n'
-    return
-  elif [[ $ignore_status == y ]]
-  then
-    #Log 'Reverse: Already On\n'
+  if [[ ":$dist_list:" =~ :$dist: ]] ; then
+    Log 'Module %s already loaded (%s)\n' "$dist" "$dist_list"
     return
   fi
 
-  # Generate function code
-  ignore_old_fn=$(
-    IFS=' '
-    for fn in $ignore_fn; do
-      declare -f "$fn" || true
-    done
-  )
-  ignore_new_fn=$(
-    IFS=' '
-    for fn in $ignore_fn; do
-      # shellcheck disable=SC2016
-      printf '%s () { IgnorePackage "$1"; }\n' "$fn"
-    done
-  )
-  set +x
-  eval "$ignore_new_fn"
-  ignore_lock=$lock
-  ignore_status=y
-}
-
-#
-# IgnoreStop [LOCK]
-#
-# Reconsider all files and packages declarations after this statement.
-#
-# The argument should be lock code, useful to ignore other sets of 
-# declarations.
-#
-
-function IgnoreStop() {
-	local lock="${1:-0}"
-
-  if [[ $ignore_lock != "$lock" ]]
-  then
-    #Log 'Reverse: Locked as its in import\n'
-    return
-  elif [[ $ignore_status == n ]]
-  then
-    #Log 'Reverse: Already Off\n'
-    return
+  # BUG: Implement git clone !
+  local dist_path=$(AconfDistPath "$dist" || true)
+  if [[ ! -d "$dist_path" ]]; then
+  #if [[ ! -d "$dist_dir/$dist" ]]; then
+    echo "BUG git clone $url $dist_dir/$dist"
+    FatalError "Can't install repo %s\n" "$url"
   fi
 
-  eval "$ignore_old_fn"
-  ignore_lock=0
-  ignore_status=n
+  dist_list="$dist:$dist_list"
+  Log 'Require: %s dist (%s)\n' "$dist" "$dist_list"
+  AconfSource "$dist" vars || true
+
+
 }
+
+#
+# Import DIST TYPE [FILTER]
+#
+# Load specific type from any distro. DIST must have been loaded with
+# the Require directive first before being able to source a file.
+#
+# The argument DIST must be a valid dir name located in dist_list.
+# The argument TYPE must be one of those:
+# - vars: any
+# - lib: any
+# - state: only on state mode
+# - inherit: only on state mode
+# - setup: only on setup mode
+# The argument FILTER is usually a filename
+#
+function Import ()
+{
+  AconfSource "$@" || {
+    FatalError 'Import: Failed to source: %s\n' "$@"
+    }
+}
+
 
 : # include in coverage

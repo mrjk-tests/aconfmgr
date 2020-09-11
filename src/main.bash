@@ -29,11 +29,13 @@ function Usage() {
 	echo
 	printf 'Supported options:\n'
 	printf '  -h, --help               Print this message\n'
-	printf '  -c, --config DIR         Set the path to your configuration directory\n'
+	printf '  -d, --dist-dir DIR       Add distro lookup path directory\n'
+	printf '  -n, --dist-name NAME     Set the distro name, default is hostname or local\n'
 	printf '  -n, --dry-mode           Prevent any file and package modifications\n'
-	printf '      --skip-inspection    Skip the system inspection step\n'
+	printf '  -P, --skip-parents       Skip parent steps when inherited\n'
+	printf '  -I, --skip-inspection    Skip the system inspection step\n'
 	printf '                           (reuse previous results)\n'
-	printf '      --skip-checksums     Skip checksum verification of installed packages\n'
+	printf '  -C, --skip-checksums     Skip checksum verification of installed packages\n'
 	printf '                           (faster and generally safe,\n'
 	printf '                            but may miss changes in exceptional circumstances)\n'
 	printf '      --aur-helper HELPER  Set AUR helper to use for installing foreign packages\n'
@@ -74,19 +76,32 @@ function Main() {
 				Usage
 				Exit 0
 				;;
-			-c|--config)
-				config_dir="$2"
+			-d|--dist-dir)
+				dist_dir="$2"
+				shift 2
+
+        if [[ ":${dist_paths-}:" != *":$dist_dir:"* ]]
+        then
+          dist_paths="$dist_dir:$dist_paths"
+        fi
+				;;
+			-n|--dist-name)
+				config_name="$2"
 				shift 2
 				;;
 	    -n|--dry-mode)
         dry_mode=y
         shift
         ;;
-			--skip-inspection)
+			-P|--skip-parents)
+				ignore_parents=true
+				shift
+				;;
+			-I|--skip-inspection)
 				skip_inspection=y
 				shift
 				;;
-			--skip-checksums)
+			-C|--skip-checksums)
 				skip_checksums=y
 				shift
 				;;
@@ -165,6 +180,14 @@ function Main() {
 			UsageError "Unrecognized --color value: %s" "$color"
 			;;
 	esac
+
+  # Setup config
+  config_dir="$dist_dir/$config_name"
+  config_name="${config_name:-${config_dir##*/}}"
+
+  # Save initial distro
+  root_dir=${config_dir}
+  root_name=${config_name}
 
 	case "$aconfmgr_action" in
 		save)
