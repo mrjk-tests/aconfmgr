@@ -104,18 +104,24 @@ function AconfCompileOutput() {
 	typeset -Ag used_files
 
 	local found=n
-	local file
-	for file in "$config_dir"/*.sh
-	do
-		if [[ -e "$file" ]]
-		then
-			LogEnter 'Sourcing %s...\n' "$(Color C "%q" "$file")"
-			# shellcheck source=/dev/null
-			source "$file"
-			found=y
-			LogLeave ''
-		fi
-	done
+  local file="$config_dir"/states.sh
+  if [[ -f "$file" ]]; then
+    Log 'Sourcing %s...\n' "$(Color C "%q" "$file")"
+    # shellcheck source=/dev/null
+    source "$file"
+    found=y
+  elif [[ -d "$config_dir/states" ]]; then
+    for file in "$config_dir/states"/[0-9]*.sh; do
+      if [[ -e "$file" ]]
+      then
+        LogEnter 'Sourcing %s...\n' "$(Color C "%q" "$file")"
+        # shellcheck source=/dev/null
+        source "$file"
+        found=y
+        LogLeave ''
+      fi
+    done
+  fi
 
 	if $lint_config
 	then
