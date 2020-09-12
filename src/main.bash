@@ -34,7 +34,6 @@ function Usage() {
 	printf '  -h, --help               Print this message\n'
 	printf '  -d, --dist-dir DIR       Add distro lookup path directory\n'
 	printf '  -n, --dist-name NAME     Set the distro name, default is hostname or local\n'
-	printf '  -N, --dry-mode           Prevent any file and package modifications\n'
 	printf '  -P, --skip-parents       Skip parent steps when inherited\n'
 	printf '  -I, --skip-inspection    Skip the system inspection step\n'
 	printf '                           (reuse previous results)\n'
@@ -47,6 +46,10 @@ function Usage() {
 	printf '      --yes                Never prompt before making any changes to the system\n'
 	printf '  -v, --verbose            Show progress with additional detail\n'
 	printf '  -T, --skip-setup-states  Skip default ApplyState call when setup\n'
+	echo
+	printf 'Supported options: apply\n'
+	printf '  -N, --dry-mode           Prevent any file and package modifications\n'
+	printf '  -p, --prune              Remove extra files and package when apply\n'
 	echo
 	printf 'For more information, please refer to the full documentation at:\n'
 	printf 'https://github.com/CyberShadow/aconfmgr#readme\n'
@@ -93,6 +96,10 @@ function Main() {
 				config_name="$2"
 				shift 2
 				;;
+	    -p|--prune)
+        prune_mode=true
+        shift
+        ;;
 	    -N|--dry-mode)
         dry_mode=true
         shift
