@@ -3,8 +3,10 @@
 # This file contains the implementation of aconfmgr's 'save' command.
 
 function AconfSave() {
-	local config_save_target=$config_dir/99-unsorted.sh
+	local config_save_target=$config_dir/states/99-unsorted.sh
 	local modified=n
+
+  mkdir -p "${config_save_target##*/}"
 
   aconfmgr_action=save
   aconfmgr_run_mode=state
@@ -270,6 +272,8 @@ function AconfSave() {
 	else
 		LogLeave 'Done (%s).\n' "$(Color Y "configuration changed")"
 	fi
+
+  rmdir "${config_save_target##*/}" 2>/dev/null || true
 }
 
 : # include in coverage

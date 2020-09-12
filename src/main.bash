@@ -85,8 +85,10 @@ function Main() {
 
 				aconfmgr_action="$1"
 				shift
-				config_name="${2-}"
-				shift || true
+        if [[ -d "${1:+$dist_dir/$1}" ]]; then
+          config_name="${1-}"
+          shift
+        fi
 
 				;;
 			-h|--help|help)
@@ -220,13 +222,12 @@ function Main() {
   dist_list="$config_name"
 
   # Save initial distro
-  # shellcheck disable=SC2034
   root_dir=${config_dir}
   root_name=${config_name}
 
   # Load configs
-  AconfSourcePath "$config_dir" vars || true
   AconfSourcePath "$config_dir" lib || true
+  AconfSourcePath "$config_dir" vars || true
 
 	case "$aconfmgr_action" in
 		save)

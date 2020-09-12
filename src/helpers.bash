@@ -374,8 +374,8 @@ function Require ()
   fi
 
   # Read vars of dist
-  dist_list="$dist:$dist_list"
-  Log 'Require: %s dist (%s)\n' "$dist" "$dist_list"
+  dist_list="${dist_list:+$dist_list:}$dist"
+  Log 'Require: dist %s (%s)\n' "$(Color G "$dist")" "$dist_list"
   AconfSource "$dist" vars || true
   # AconfSource "$dist" lib || true
 
