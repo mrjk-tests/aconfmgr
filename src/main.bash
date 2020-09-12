@@ -84,8 +84,9 @@ function Main() {
 				fi
 
 				aconfmgr_action="$1"
-				config_name="$2"
-				shift 2
+				shift
+				config_name="${2-}"
+				shift || true
 
 				;;
 			-h|--help|help)
@@ -202,9 +203,20 @@ function Main() {
 			;;
 	esac
 
+  # Setup default config name
+  if [[ -z "$config_name" ]]; then
+    config_name="host_${HOSTNAME:-local}"
+    config_dir="$dist_dir/$config_name"
+    if [[ ! -d "$config_dir" ]]; then
+      Log 'Default config created for %s in %s\n' "$config_name" "$config_dir"
+      mkdir -p "$config_dir"
+    fi
+  else
+    config_dir="$(AconfDistPath "$config_name")"
+    config_name="${config_name:-${config_dir##*/}}"
+  fi
+
   # Setup config
-  config_dir="$(AconfDistPath "$config_name")"
-  config_name="${config_name:-${config_dir##*/}}"
   dist_list="$config_name"
 
   # Save initial distro

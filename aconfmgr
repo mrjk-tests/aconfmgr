@@ -28,7 +28,7 @@ then
 	tmp_dir="${TMPDIR:-/tmp}/aconfmgr-$USER"
 fi
 
-config_name=${HOSTNAME:-local}
+config_name=
 dist_paths=$dist_dir
 dist_list=
 
