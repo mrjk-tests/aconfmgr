@@ -290,30 +290,9 @@ function IgnorePath() {
 ####################################################################################################
 
 #
-# Load TYPE [FILTER]
-#
-# Load specific type file.
-#
-# The argument TYPE must be one of those:
-# - vars: any
-# - lib: any
-# - state: only on state mode
-# - inherit: only on state mode
-# - setup: only on setup mode
-# The argument FILTER is usually a filename
-#
-function Load ()
-{
-  local dist=${config_dir##*/}
-  AconfSource "$dist" "$@" || {
-    FatalError 'Load: Failed to source: %s\n' "$@"
-    }
-}
-
-#
 # Require DIST [URL]
 #
-# Adds the specified distro to the requirements.
+# Adds the specified distro to the requirements. Also load its vars if any.
 #
 # The argument DIST must be a valid dir name located in dist_list.
 # The argument URL should be a valid git url (http or ssh). If the
@@ -326,27 +305,65 @@ function Require ()
   local dist_path=
 
   if [[ ":$dist_list:" =~ :$dist: ]] ; then
-    Log 'Module %s already loaded (%s)\n' "$dist" "$dist_list"
+    Log 'Require: Module %s already loaded (%s)\n' "$dist" "$dist_list"
     return
   fi
 
   # BUG: Implement git clone !
   dist_path=$(AconfDistPath "$dist" || true)
-  if [[ ! -d "$dist_path" ]]; then
-  #if [[ ! -d "$dist_dir/$dist" ]]; then
-    echo "BUG git clone $url $dist_dir/$dist"
-    FatalError "Can't install repo %s\n" "$url"
+  if [[ ! -d "$dist_path" ]]
+  then
+    if [[ ! -z "$url" ]]
+    then
+      echo "BUG git clone $url $dist_dir/$dist"
+      FatalError "Require: Can't install repo, not implemeted %s\n" "$url"
+    else
+      FatalError "Require: Missing repo for dist: %s\n" "$url"
+    fi
   fi
 
+  # Read vars of dist
   dist_list="$dist:$dist_list"
   Log 'Require: %s dist (%s)\n' "$dist" "$dist_list"
   AconfSource "$dist" vars || true
+  # AconfSource "$dist" lib || true
 
+}
+
+#
+# Load TYPE [FILTER]
+#
+# Load specific type file from the current distro.
+# See AconfSource documentation below
+#
+function Load ()
+{
+  local dist=${config_dir##*/}
+  AconfSource "$dist" "$@" || {
+    FatalError 'Load: Failed to source: %s\n' "$@"
+    }
 }
 
 #
 # Import DIST TYPE [FILTER]
 #
+# Load specific type from any distro. DIST must have been loaded with
+# the Require directive first before being able to source a file.
+#
+# See AconfSource documentation below
+#
+
+function Import ()
+{
+  AconfSource "$@" || {
+    FatalError 'Import: Failed to source: %s\n' "$@"
+    }
+}
+
+#
+# AconfSource DIST TYPE [FILTER]
+#
+# Low level API.
 # Load specific type from any distro. DIST must have been loaded with
 # the Require directive first before being able to source a file.
 #
@@ -359,13 +376,34 @@ function Require ()
 # - setup: only on setup mode
 # The argument FILTER is usually a filename
 #
-
-function Import ()
+function AconfSource ()
 {
-  AconfSource "$@" || {
-    FatalError 'Import: Failed to source: %s\n' "$@"
-    }
+  local dist=$1
+  local type=$2
+  local filter=${3-}
+  local dist_path=
+
+  # Sanity Check
+  if ! [[ ":$dist_list:" =~ :$dist: ]]
+  then
+    FatalError 'AconfSource: Module %s must be loaded first with a Require statement. (%s)\n' "$dist" "$dist_list"
+  fi
+
+  dist_path=$(AconfDistPath "$dist" || true)
+  case "$type" in
+    vars)
+      # Vars does not fail if not found
+      AconfSourcePath "$dist_path" "$type" "$filter" || true ;;
+    unsorted)
+      # Does not fail if not found
+      AconfSourcePath "$dist_path" "$type" "99-unsorted" || true ;;
+    *)  #lib|state|setup|inherit)
+      # Fails by default
+      AconfSourcePath "$dist_path" "$type" "$filter" ;;
+  esac || Error 'AconfSource: Cant find any suitable "%s/%s/%s"\n' "$dist" "$type" "${filter:-*}"
 }
+
+
 
 ####################################################################################################
 
@@ -388,28 +426,31 @@ function IgnoreStart() {
 
   if [[ "$ignore_lock" != "$lock" ]]
   then
-    #Log 'Reverse: Locked as its in import\n'
+    #Log 'IgnoreStart: Locked as its in import\n'
     return
   elif "$ignore_status"
   then
-    #Log 'Reverse: Already On\n'
+    #Log 'IgnoreStart: Already On\n'
     return
   fi
 
   # Generate function code
   ignore_old_fn=$(
     IFS=' '
-    for fn in $ignore_fn_pkg $ignore_fn_files ; do
+    for fn in $ignore_fn_pkg $ignore_fn_files
+    do
       declare -f "$fn" || true
     done
   )
   ignore_new_fn=$(
     IFS=' '
-    for fn in $ignore_fn_pkg; do
+    for fn in $ignore_fn_pkg
+    do
       # shellcheck disable=SC2016
       printf '%s () { IgnorePackage "$1"; }\n' "$fn"
     done
-    for fn in $ignore_fn_files; do
+    for fn in $ignore_fn_files
+    do
       # shellcheck disable=SC2016
       printf '%s () { IgnorePath "$1"; }\n' "$fn"
     done
@@ -433,11 +474,11 @@ function IgnoreStop() {
 
   if [[ "$ignore_lock" != "$lock" ]]
   then
-    #Log 'Reverse: Locked as its in import\n'
+    #Log 'IgnoreStop: Locked as its in import\n'
     return
   elif "$ignore_status"
   then
-    #Log 'Reverse: Already Off\n'
+    #Log 'IgnoreStop: Already Off\n'
     return
   fi
 
@@ -463,17 +504,17 @@ function IgnoreStop() {
 ApplyStates ()
 {
   if $aconfmgr_run_mode != 'setup' ; then
-    FatalError "aconfmgr: ApplyStates can only be used in setup files\n"
+    FatalError "ApplyStates: this directive can only be used in setup files\n"
     return 1
   elif $setup_skip_states; then
-    Log 'aconfmgr: ApplyStates, skipped because of --skip-setup-states flag\n'
+    Log 'ApplyStates: skipped because of --skip-setup-states flag\n'
     return
   elif $dry_mode ; then
-    Log 'aconfmgr: ApplyStates, dry mode run check instead\n'
+    Log 'ApplyStates: dry mode run check instead\n'
     Exec AconfApply
     AconfCheck
   else
-    Log 'aconfmgr: ApplyStates\n'
+    Log 'ApplyStates: run\n'
     Exec AconfApply
   fi
 }
@@ -489,13 +530,15 @@ ApplyStates ()
 
 function Exec ()
 {
-  if $aconfmgr_run_mode != 'setup' ; then
-    FatalError "Directive Exec can only be used in setup files.\n"
+  if $aconfmgr_run_mode != 'setup'
+  then
+    FatalError "Exec: this directive can only be used in setup files\n"
     return 1
   fi
 
-  Log "Execute %s\n" "$(Color C "%s" "$@")"
-  if ! $dry_mode; then
+  Log "Exec: run %s\n" "$(Color C "%s" "$@")"
+  if ! $dry_mode
+  then
    "$@"
   fi
 }

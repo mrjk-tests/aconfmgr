@@ -102,33 +102,6 @@ function AconfDistPath ()
   FatalError 'Impossible to find module: %s\n' "$dist"
 }
 
-function AconfSource ()
-{
-  local dist=$1
-  local type=$2
-  local filter=${3-}
-  local dist_path=
-
-  # Sanity Check
-  if ! [[ ":$dist_list:" =~ :$dist: ]] ; then
-    FatalError 'Module %s must be loaded first with a Require statement. (%s)\n' "$dist" "$dist_list"
-  fi
-
-  dist_path=$(AconfDistPath "$dist" || true)
-  case "$type" in
-    vars)
-      # Vars does not fail if not found
-      AconfSourcePath "$dist_path" "$type" "$filter" || true ;;
-    unsorted)
-      # Does not fail if not found
-      AconfSourcePath "$dist_path" "$type" "99-unsorted" || true ;;
-    *)  #lib|state|setup|inherit)
-      # Fails by default
-      AconfSourcePath "$dist_path" "$type" "$filter" ;;
-  esac || Error 'Source: Cant find any suitable "%s/%s/%s"\n' "$dist" "$type" "${filter:-*}"
-}
-
-
 function AconfSourcePath ()
 {
   local dist_path=$1
@@ -165,7 +138,6 @@ function AconfSourcePath ()
       ;;
     inherit)
       # runmode: state
-      #[[ "$aconfmgr_run_mode" == "state" ]] || FatalError "You can't\n"
       method_name='ImportInherit'
       pattern='states'
       run_mode=states
