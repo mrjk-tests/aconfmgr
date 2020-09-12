@@ -21,6 +21,12 @@ else
 	tmp_dir="${TMPDIR:-/tmp}/aconfmgr-$USER"
 	src_dir=/usr/lib/aconfmgr
 fi
+if [[ $EUID == 0 ]]
+then
+	# Running as root
+	dist_dir=/etc/aconfmgr.d
+	tmp_dir="${TMPDIR:-/tmp}/aconfmgr-$USER"
+fi
 
 config_name=${HOSTNAME:-local}
 dist_paths=$dist_dir
