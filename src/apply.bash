@@ -1,6 +1,7 @@
 # apply.bash
 
 # This file contains the implementation of aconfmgr's 'apply' command.
+aconfmgr_applied=false
 
 function AconfApply() {
 	local modified=n
@@ -789,6 +790,7 @@ function AconfApply() {
 	else
 		LogLeave 'Done (%s).\n' "$(Color Y "system state changed")"
 	fi
+  aconfmgr_applied=true
 }
 
 : # include in coverage

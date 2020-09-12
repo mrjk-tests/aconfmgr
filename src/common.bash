@@ -34,6 +34,7 @@ aconfmgr_run_mode=
 
 # Command line config
 dry_mode=false
+setup_skip_states=false
 
 ####################################################################################################
 
