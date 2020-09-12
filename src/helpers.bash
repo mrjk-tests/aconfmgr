@@ -313,7 +313,7 @@ function Require ()
   dist_path=$(AconfDistPath "$dist" || true)
   if [[ ! -d "$dist_path" ]]
   then
-    if [[ ! -z "$url" ]]
+    if [[ -n "$url" ]]
     then
       echo "BUG git clone $url $dist_dir/$dist"
       FatalError "Require: Can't install repo, not implemeted %s\n" "$url"
@@ -531,13 +531,15 @@ ApplyStates ()
 
 function Exec ()
 {
-  local args=$@
+  # shellcheck disable=SC2178 disable=SC2124
+  local args="$@"
   if [[ $aconfmgr_run_mode != 'setup' ]]
   then
     FatalError "Exec: this directive can only be used in setup files\n"
     return 1
   fi
 
+  # shellcheck disable=SC2128
   Log "Exec: run %s\n" "$(Color Y "%s" "$args")"
   if ! $dry_mode
   then

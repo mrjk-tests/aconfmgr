@@ -270,7 +270,7 @@ function AconfApply() {
 
     if $dry_mode
     then
-      for pkg in ${unknown_packages[@]}
+      for pkg in "${unknown_packages[@]}"
       do
         Log '* %s (%s)\n' "$(Color R %q "$pkg")" "setting install reason as dependency"
       done
@@ -303,7 +303,7 @@ function AconfApply() {
 
     if $dry_mode
     then
-      for pkg in ${missing_unpinned_packages[@]}
+      for pkg in "${missing_unpinned_packages[@]}"
       do
         Log '* %s (%s)\n' "$(Color G %q "$pkg")" "setting install reason as dependency"
       done
@@ -350,7 +350,7 @@ function AconfApply() {
 
         if $dry_mode
         then
-          for pkg in ${orphan_packages[@]}
+          for pkg in "${orphan_packages[@]}"
           do
             Log '* %s\n' "$(Color R %q "$pkg")"
           done

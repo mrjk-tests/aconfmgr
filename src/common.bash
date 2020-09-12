@@ -91,7 +91,9 @@ function AconfDistList ()
   for path in ${dist_paths//:/$'\n'}; do
     path=$(realpath "$path" || true )
 
-    local dists_dir=$(find "$path" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort || true)
+    local dists_dir=
+    dists_dir=$(find "$path" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort || true)
+
     if [[ -n "$dists_dir" ]]; then
       Log '* %s:\n' "$path"
       for dist_dir in $dists_dir; do
@@ -111,7 +113,7 @@ function AconfDistPath ()
     local new_config_dir="$path/$new_config_name"
     new_config_dir=$(realpath "$new_config_dir" || true )
     if [[ -d "$new_config_dir" ]]; then
-      printf "$new_config_dir\n"
+      printf "%s\n" "$new_config_dir"
       return
     fi
   done
@@ -210,7 +212,10 @@ function AconfSourcePath ()
   if $logsection; then
     log_enter=LogEnter
     log_leave=LogLeaveSilent
-    [[ "$method" == "setup" ]] && log_leave=LogLeave || true
+    if [[ "$method" == "setup" ]]
+    then
+      log_leave=LogLeave
+    fi
   fi
 
   # Lookup file

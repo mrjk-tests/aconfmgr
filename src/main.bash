@@ -203,7 +203,7 @@ function Main() {
 	esac
 
   # Setup config
-  config_dir="$(AconfDistPath $config_name)"
+  config_dir="$(AconfDistPath "$config_name")"
   config_name="${config_name:-${config_dir##*/}}"
   dist_list="$config_name"
 
