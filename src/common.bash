@@ -107,13 +107,14 @@ function AconfSource ()
   local dist=$1
   local type=$2
   local filter=${3-}
+  local dist_path=
 
   # Sanity Check
   if ! [[ ":$dist_list:" =~ :$dist: ]] ; then
     FatalError 'Module %s must be loaded first with a Require statement. (%s)\n' "$dist" "$dist_list"
   fi
 
-  local dist_path=$(AconfDistPath "$dist" || true)
+  dist_path=$(AconfDistPath "$dist" || true)
   case "$type" in
     vars)
       # Vars does not fail if not found
@@ -170,11 +171,11 @@ function AconfSourcePath ()
       run_mode=states
       logsection=true
 
-      if $ignore_parents || [[ "$dist" == "$root_dist" ]] ; then
+      if $ignore_parents || [[ "$dist" == "$root_name" ]] ; then
         Log '%s: Ignoring parents ...\n' "$method_name"
       else
         Log '%s: Loading parents %s ...\n' "$method_name" "$dist"
-        IgnoreStart
+        IgnoreStart true
         ignore_lock=true
       fi
       ;;
@@ -185,14 +186,14 @@ function AconfSourcePath ()
       sequential=true
       logsection=true
       run_mode=setup
-      if $ignore_parents || [[ "$dist" == "$root_dist" ]] ; then
+      if $ignore_parents || [[ "$dist" == "$root_name" ]] ; then
         Log '%s: Loading parents %s ...\n' "$method_name" "$dist"
       else
         Log '%s: Ignoring %s (%s)\n' "$method_name" "$(Color C "%q" "$dist/$pattern")" "$dist_path/$pattern.sh"
         return
       fi
       ;;
-    *) FatalError 'Unsupported import method: %s\n' "$method" ;;
+    *) FatalError 'Unsupported import method for AconfSourcePath: %s\n' "$method" ;;
   esac
 
   # Configure exec environment
@@ -200,14 +201,18 @@ function AconfSourcePath ()
     FatalError 'Impossible to import item %s/%s/%s while in %s mode\n' "$dist" "$method" "${filter:-*}" "$run_mode"
   fi
 
-  # Backup current config
-  local old_ignore_status=$ignore_status
-  local old_config_dir="$config_dir"
-  local old_config_name="$config_name"
+  # Replace dist config vars
+  if [[ "$config_dir" != "$dist_path" ]]
+  then
+    # Backup current config
+    local old_ignore_status=$ignore_status
+    local old_config_dir="$config_dir"
+    local old_config_name="$config_name"
 
-  # Apply new config
-  config_dir="$dist_path"
-  config_name="${config_dir##*/}"
+    # Apply new config
+    config_dir="$dist_path"
+    config_name="${config_dir##*/}"
+  fi
 
   # Enable log section
   if $logsection; then
@@ -257,16 +262,19 @@ function AconfSourcePath ()
     fi
   fi
 
-  # Restore config
-  config_dir="$old_config_dir"
-  config_name="$old_config_name"
-  if "$ignore_lock"; then
-    ignore_lock=false
-    if [[ "$old_ignore_status" != "$ignore_status" ]]; then
-      if "$old_ignore_status"; then
-        IgnoreStart
-      else
-        IgnoreStop
+  # Restore config vars
+  if [[ "$config_dir" != "$dist_path" ]]
+  then
+    config_dir="$old_config_dir"
+    config_name="$old_config_name"
+    if "$ignore_lock"; then
+      ignore_lock=false
+      if [[ "$old_ignore_status" != "$ignore_status" ]]; then
+        if "$old_ignore_status"; then
+          IgnoreStart true
+        else
+          IgnoreStop true
+        fi
       fi
     fi
   fi

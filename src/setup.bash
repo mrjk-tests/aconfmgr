@@ -7,8 +7,7 @@ function AconfSetup() {
   aconfmgr_run_mode=setup
   
   # Default import
-  AconfSource "$root_dist" lib || true
-  AconfSource "$root_dist" setup || true
+  AconfSourcePath "$config_dir" setup || true
 
   # Automagically run the system compliance
   if ! $aconfmgr_applied

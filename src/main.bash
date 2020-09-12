@@ -201,8 +201,13 @@ function Main() {
   config_name="${config_name:-${config_dir##*/}}"
 
   # Save initial distro
+  # shellcheck disable=SC2034
   root_dir=${config_dir}
   root_name=${config_name}
+
+  # Load configs
+  AconfSourcePath "$config_dir" vars || true
+  AconfSourcePath "$config_dir" lib || true
 
 	case "$aconfmgr_action" in
 		save)

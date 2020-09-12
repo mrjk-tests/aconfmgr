@@ -323,6 +323,7 @@ function Require ()
 {
   local dist=${1}
   local url=${2:-}
+  local dist_path=
 
   if [[ ":$dist_list:" =~ :$dist: ]] ; then
     Log 'Module %s already loaded (%s)\n' "$dist" "$dist_list"
@@ -330,7 +331,7 @@ function Require ()
   fi
 
   # BUG: Implement git clone !
-  local dist_path=$(AconfDistPath "$dist" || true)
+  dist_path=$(AconfDistPath "$dist" || true)
   if [[ ! -d "$dist_path" ]]; then
   #if [[ ! -d "$dist_dir/$dist" ]]; then
     echo "BUG git clone $url $dist_dir/$dist"
@@ -398,7 +399,7 @@ function IgnoreStart() {
   # Generate function code
   ignore_old_fn=$(
     IFS=' '
-    for fn in $ignore_fn_pkg $ignore_fn_file ; do
+    for fn in $ignore_fn_pkg $ignore_fn_files ; do
       declare -f "$fn" || true
     done
   )
@@ -408,7 +409,7 @@ function IgnoreStart() {
       # shellcheck disable=SC2016
       printf '%s () { IgnorePackage "$1"; }\n' "$fn"
     done
-    for fn in $ignore_fn_file; do
+    for fn in $ignore_fn_files; do
       # shellcheck disable=SC2016
       printf '%s () { IgnorePath "$1"; }\n' "$fn"
     done
@@ -428,7 +429,7 @@ function IgnoreStart() {
 #
 
 function IgnoreStop() {
-	local lock="${1:-0}"
+	local lock=${1:-false}
 
   if [[ "$ignore_lock" != "$lock" ]]
   then
