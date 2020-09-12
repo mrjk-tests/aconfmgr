@@ -179,7 +179,10 @@ function AconfApply() {
 
 	AconfCompile
 
-	LogEnter 'Applying configuration...\n'
+  local log_msg='in dry mode '
+  $dry_mode || log_msg=
+
+	LogEnter 'Applying configuration %s...\n' "$log_msg"
 
 	#
 	# Priority files
@@ -265,10 +268,18 @@ function AconfApply() {
 	then
 		LogEnter 'Unpinning %s unknown packages.\n' "$(Color G ${#unknown_packages[@]})"
 
-		function Details() { Log 'Unpinning (setting install reason to '\''as dependency'\'') the following packages:%s\n' "$(Color M " %q" "${unknown_packages[@]}")" ; }
-		Confirm Details
+    if $dry_mode
+    then
+      for pkg in ${unknown_packages[@]}
+      do
+        Log '* %s (%s)\n' "$(Color G %q "$pkg")" "setting install reason as dependency"
+      done
+    else
+      function Details() { Log 'Unpinning (setting install reason to '\''as dependency'\'') the following packages:%s\n' "$(Color M " %q" "${unknown_packages[@]}")" ; }
+      Confirm Details
 
-		Print0Array unknown_packages | sudo xargs -0 "$PACMAN" --database --asdeps
+      Print0Array unknown_packages | sudo xargs -0 "$PACMAN" --database --asdeps
+    fi
 
 		modified=y
 		LogLeave
@@ -290,10 +301,18 @@ function AconfApply() {
 	then
 		LogEnter 'Pinning %s unknown packages.\n' "$(Color G ${#missing_unpinned_packages[@]})"
 
-		function Details() { Log 'Pinning (setting install reason to '\''explicitly installed'\'') the following packages:%s\n' "$(Color M " %q" "${missing_unpinned_packages[@]}")" ; }
-		Confirm Details
+    if $dry_mode
+    then
+      for pkg in ${missing_unpinned_packages[@]}
+      do
+        Log '* %s (%s)\n' "$(Color G %q "$pkg")" "setting install reason as dependency"
+      done
+    else
+      function Details() { Log 'Pinning (setting install reason to '\''explicitly installed'\'') the following packages:%s\n' "$(Color M " %q" "${missing_unpinned_packages[@]}")" ; }
+      Confirm Details
 
-		Print0Array missing_unpinned_packages | sudo xargs -0 "$PACMAN" --database --asexplicit
+      Print0Array missing_unpinned_packages | sudo xargs -0 "$PACMAN" --database --asexplicit
+    fi
 
 		modified=y
 		LogLeave
@@ -329,7 +348,15 @@ function AconfApply() {
 				"$PACMAN" --query --list --quiet "${orphan_packages[@]}" | sed 's#^\(.*\)/$#\1#' | mapfile -t deleted_files
 				files_in_deleted_packages+=("${deleted_files[@]}")
 
-				sudo "${pacman_opts[@]}" --remove "${orphan_packages[@]}"
+        if $dry_mode
+        then
+          for pkg in ${orphan_packages[@]}
+          do
+            Log '* %s\n' "$(Color R %q "$file")"
+          done
+        else
+          sudo "${pacman_opts[@]}" --remove "${orphan_packages[@]}"
+        fi
 
 				LogLeave
 			fi
@@ -711,14 +738,20 @@ function AconfApply() {
 				AconfNeedProgram diff diffutils n
 				AconfGetPackageOriginalFile "$package" "$file" | ( "${diff_opts[@]}" --unified <(SuperCat "$file") - || true )
 			}
-			if sudo test -f "$file"
-			then
-				ParanoidConfirm Details
-			else
-				ParanoidConfirm ''
-			fi
 
-			AconfRestoreFile "$package" "$file"
+      if $dry_mode
+      then
+        Log '* %s\n' "$(Color Y %q "$file")"
+      else
+        if sudo test -f "$file"
+        then
+          ParanoidConfirm Details
+        else
+          ParanoidConfirm ''
+        fi
+
+        AconfRestoreFile "$package" "$file"
+      fi
 
 			# The file was restored with all of its original properties.
 			local prop
@@ -790,7 +823,7 @@ function AconfApply() {
 				local file="${key%:*}"
 				local value="${output_file_props[$key]:-}"
 
-				ApplyFileProperty "$kind" "$value" "$file"
+				$dry_run || ApplyFileProperty "$kind" "$value" "$file"
 			done
 
 		modified=y
@@ -803,9 +836,9 @@ function AconfApply() {
 
 	if [[ $modified == n ]]
 	then
-		LogLeave 'Done (%s).\n' "$(Color G "system state unchanged")"
+		LogLeave 'Done %s(%s).\n' "$log_msg" "$(Color G "system state unchanged")"
 	else
-		LogLeave 'Done (%s).\n' "$(Color Y "system state changed")"
+		LogLeave 'Done %s(%s).\n' "$log_msg" "$(Color Y "system state changed")"
 	fi
   aconfmgr_applied=true
 }
