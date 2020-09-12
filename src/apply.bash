@@ -4,6 +4,9 @@
 
 function AconfApply() {
 	local modified=n
+  local prune_files=$prune_mode
+  local prune_pkg=$prune_mode
+
   aconfmgr_action=apply
   aconfmgr_run_mode=state
 
@@ -253,7 +256,7 @@ function AconfApply() {
 		 <((PrintArray installed_packages ; PrintArray installed_foreign_packages) | sort) \
 		 | mapfile -t unknown_packages
 
-	if [[ ${#unknown_packages[@]} != 0 ]]
+	if [[ ${#unknown_packages[@]} != 0 ]] && $prune_pkg
 	then
 		LogEnter 'Unpinning %s unknown packages.\n' "$(Color G ${#unknown_packages[@]})"
 
@@ -295,7 +298,7 @@ function AconfApply() {
 
 	local -a files_in_deleted_packages=()
 
-	if "$PACMAN" --query --unrequired --unrequired --deps --quiet > /dev/null
+	if $prune_pkg && "$PACMAN" --query --unrequired --unrequired --deps --quiet > /dev/null
 	then
 		LogEnter 'Pruning orphan packages...\n'
 
@@ -593,7 +596,7 @@ function AconfApply() {
 
 	LogLeave # Processing deleted files
 
-	if [[ ${#files_to_delete[@]} != 0 ]]
+	if $prune_files && [[ ${#files_to_delete[@]} != 0 ]]
 	then
 		LogEnter 'Deleting %s files.\n' "$(Color G ${#files_to_delete[@]})"
 		printf '%s\0' "${files_to_delete[@]}" | sort --zero-terminated | mapfile -d $'\0' files_to_delete
