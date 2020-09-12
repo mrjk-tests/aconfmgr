@@ -12,6 +12,8 @@ source "$src_dir"/save.bash
 source "$src_dir"/apply.bash
 # shellcheck source=check.bash
 source "$src_dir"/check.bash
+# shellcheck source=setup.bash
+source "$src_dir"/setup.bash
 # shellcheck source=helpers.bash
 source "$src_dir"/helpers.bash
 
@@ -26,6 +28,7 @@ function Usage() {
 	printf '  save    Update the configuration to reflect the current state of the system\n'
 	printf '  apply   Update the system to reflect the current contents of the configuration\n'
 	printf '  check   Syntax-check and lint the configuration\n'
+	printf '  setup   Run setup scripts and apply for conformity\n'
 	echo
 	printf 'Supported options:\n'
 	printf '  -h, --help               Print this message\n'
@@ -43,6 +46,7 @@ function Usage() {
 	printf '      --paranoid           Always prompt before making any changes to the system\n'
 	printf '      --yes                Never prompt before making any changes to the system\n'
 	printf '  -v, --verbose            Show progress with additional detail\n'
+	printf '  -T, --skip-setup-states  Skip default ApplyState call when setup\n'
 	echo
 	printf 'For more information, please refer to the full documentation at:\n'
 	printf 'https://github.com/CyberShadow/aconfmgr#readme\n'
@@ -63,7 +67,7 @@ function Main() {
 	while [[ $# != 0 ]]
 	do
 		case "$1" in
-			save|apply|check)
+			save|apply|check|setup)
 				if [[ -n "$aconfmgr_action" ]]
 				then
 					UsageError "An action has already been specified"
@@ -93,6 +97,10 @@ function Main() {
         dry_mode=true
         shift
         ;;
+			-T|--skip-setup-states)
+				setup_skip_states=true
+				shift
+				;;
 			-P|--skip-parents)
 				ignore_parents=true
 				shift
@@ -198,6 +206,9 @@ function Main() {
 			;;
 		check)
 			AconfCheck
+			;;
+		setup)
+			AconfSetup
 			;;
 		*)
 			Usage

@@ -447,4 +447,58 @@ function IgnoreStop() {
 
 }
 
+####################################################################################################
+
+#
+# ApplyStates
+#
+# Will simulate like a aconfmgr apply. Useful for setup that want to manage when 
+# the State compliance must be enforced. By default, states are applied at the
+# end of the setup, unless the --skip-setup-states is enabled.
+#
+# Note: Can only be called in setup mode, fails otherwise
+#
+
+ApplyStates ()
+{
+  if $aconfmgr_run_mode != 'setup' ; then
+    FatalError "aconfmgr: ApplyStates can only be used in setup files\n"
+    return 1
+  elif $setup_skip_states; then
+    Log 'aconfmgr: ApplyStates, skipped because of --skip-setup-states flag\n'
+    return
+  elif $dry_mode ; then
+    Log 'aconfmgr: ApplyStates, dry mode run check instead\n'
+    Exec AconfApply
+    AconfCheck
+  else
+    Log 'aconfmgr: ApplyStates\n'
+    Exec AconfApply
+  fi
+}
+
+#
+# Exec
+#
+# Command line wrapper. Allows to not run commands while in dry mode.
+# This should be systematically used for commands.
+#
+# Note: Can only be called in setup mode, fails otherwise
+#
+
+function Exec ()
+{
+  if $aconfmgr_run_mode != 'setup' ; then
+    FatalError "Directive Exec can only be used in setup files.\n"
+    return 1
+  fi
+
+  Log "Execute %s\n" "$(Color C "%s" "$@")"
+  if ! $dry_mode; then
+   "$@"
+  fi
+}
+
+
+
 : # include in coverage
