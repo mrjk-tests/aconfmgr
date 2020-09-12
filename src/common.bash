@@ -116,7 +116,7 @@ function AconfDistPath ()
     fi
   done
 
-  FatalError 'Impossible to find module: %s\n' "$new_config_name"
+  FatalError 'Impossible to find dist: %s\n' "$new_config_name"
 }
 
 function AconfSourcePath ()

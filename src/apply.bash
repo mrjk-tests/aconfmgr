@@ -266,16 +266,16 @@ function AconfApply() {
 
 	if [[ ${#unknown_packages[@]} != 0 ]] && $prune_pkg
 	then
-		LogEnter 'Unpinning %s unknown packages.\n' "$(Color G ${#unknown_packages[@]})"
+		LogEnter 'Unpinning %s unknown packages.\n' "$(Color R ${#unknown_packages[@]})"
 
     if $dry_mode
     then
       for pkg in ${unknown_packages[@]}
       do
-        Log '* %s (%s)\n' "$(Color G %q "$pkg")" "setting install reason as dependency"
+        Log '* %s (%s)\n' "$(Color R %q "$pkg")" "setting install reason as dependency"
       done
     else
-      function Details() { Log 'Unpinning (setting install reason to '\''as dependency'\'') the following packages:%s\n' "$(Color M " %q" "${unknown_packages[@]}")" ; }
+      function Details() { Log 'Unpinning (setting install reason to '\''as dependency'\'') the following packages:%s\n' "$(Color R " %q" "${unknown_packages[@]}")" ; }
       Confirm Details
 
       Print0Array unknown_packages | sudo xargs -0 "$PACMAN" --database --asdeps
@@ -308,7 +308,7 @@ function AconfApply() {
         Log '* %s (%s)\n' "$(Color G %q "$pkg")" "setting install reason as dependency"
       done
     else
-      function Details() { Log 'Pinning (setting install reason to '\''explicitly installed'\'') the following packages:%s\n' "$(Color M " %q" "${missing_unpinned_packages[@]}")" ; }
+      function Details() { Log 'Pinning (setting install reason to '\''explicitly installed'\'') the following packages:%s\n' "$(Color G " %q" "${missing_unpinned_packages[@]}")" ; }
       Confirm Details
 
       Print0Array missing_unpinned_packages | sudo xargs -0 "$PACMAN" --database --asexplicit
@@ -339,9 +339,9 @@ function AconfApply() {
 
 			if [[ ${#orphan_packages[@]} != 0 ]]
 			then
-				LogEnter 'Pruning %s orphan packages.\n' "$(Color G ${#orphan_packages[@]})"
+				LogEnter 'Pruning %s orphan packages.\n' "$(Color R ${#orphan_packages[@]})"
 
-				function Details() { Log 'Removing the following orphan packages:%s\n' "$(Color M " %q" "${orphan_packages[@]}")" ; }
+				function Details() { Log 'Removing the following orphan packages:%s\n' "$(Color R " %q" "${orphan_packages[@]}")" ; }
 				ParanoidConfirm Details
 
 				local -a deleted_files=()
@@ -352,8 +352,9 @@ function AconfApply() {
         then
           for pkg in ${orphan_packages[@]}
           do
-            Log '* %s\n' "$(Color R %q "$file")"
+            Log '* %s\n' "$(Color R %q "$pkg")"
           done
+			    orphan_packages=()
         else
           sudo "${pacman_opts[@]}" --remove "${orphan_packages[@]}"
         fi
@@ -384,7 +385,7 @@ function AconfApply() {
 	then
 		LogEnter 'Installing %s missing native packages.\n' "$(Color G ${#missing_native_packages[@]})"
 
-		function Details() { Log 'Installing the following native packages:%s\n' "$(Color M " %q" "${missing_native_packages[@]}")" ; }
+		function Details() { Log 'Installing the following native packages:%s\n' "$(Color G " %q" "${missing_native_packages[@]}")" ; }
 		ParanoidConfirm Details
 
 		AconfInstallNative "${missing_native_packages[@]}"
@@ -401,7 +402,7 @@ function AconfApply() {
 	then
 		LogEnter 'Installing %s missing foreign packages.\n' "$(Color G ${#missing_foreign_packages[@]})"
 
-		function Details() { Log 'Installing the following foreign packages:%s\n' "$(Color M " %q" "${missing_foreign_packages[@]}")" ; }
+		function Details() { Log 'Installing the following foreign packages:%s\n' "$(Color G " %q" "${missing_foreign_packages[@]}")" ; }
 		Confirm Details
 
 		# If an AUR helper is present in the list of packages to be installed,
@@ -414,7 +415,7 @@ function AconfApply() {
 				do
 					if [[ "$package" == "$helper" ]]
 					then
-						LogEnter 'Installing AUR helper %s...\n' "$(Color M %q "$helper")"
+						LogEnter 'Installing AUR helper %s...\n' "$(Color G %q "$helper")"
 						ParanoidConfirm ''
 						AconfInstallForeign "$package"
 						aur_helper="$package"
@@ -457,24 +458,26 @@ function AconfApply() {
 	if [[ "${#modified_files_in_deleted_packages[@]}" -gt 0 ]]
 	then
 		LogEnter 'Detected %s modified files in pruned packages.\n' \
-				 "$(Color G %s "${#modified_files_in_deleted_packages[@]}")"
+				 "$(Color Y %s "${#modified_files_in_deleted_packages[@]}")"
 
 		LogEnter 'Updating system file data...\n'
 		local file
 		for file in "${modified_files_in_deleted_packages[@]}"
 		do
-			local system_file="$system_dir"/files"$file"
-			if [[ -h "$system_file" || -f "$system_file" ]]
-			then
-				rm --force "$system_file"
-			elif [[ -d "$system_file" ]]
-			then
-				rmdir --ignore-fail-on-non-empty "$system_file"
-			elif [[ -e "$system_file" ]]
-			then
-				FatalError '%s exists, but is neither file or directory or link?\n' \
-						   "$(Color C "%q" "$file")"
-			fi
+      if ! $dry_mode; then
+        local system_file="$system_dir"/files"$file"
+        if [[ -h "$system_file" || -f "$system_file" ]]
+        then
+          rm --force "$system_file"
+        elif [[ -d "$system_file" ]]
+        then
+          rmdir --ignore-fail-on-non-empty "$system_file"
+        elif [[ -e "$system_file" ]]
+        then
+          FatalError '%s exists, but is neither file or directory or link?\n' \
+                 "$(Color C "%q" "$file")"
+        fi
+      fi
 
 			local prop
 			for prop in "${all_file_property_kinds[@]}"
@@ -502,12 +505,12 @@ function AconfApply() {
 
 	if [[ ${#changed_files[@]} != 0 ]]
 	then
-		LogEnter 'Overwriting %s changed files.\n' "$(Color G ${#changed_files[@]})"
+		LogEnter 'Overwriting %s changed files.\n' "$(Color Y ${#changed_files[@]})"
 
 		# shellcheck disable=2059
 		function Details() {
 			Log 'Overwriting the following changed files:\n'
-			printf "$(Color W "*") $(Color C "%s" "%s")\\n" "${changed_files[@]}"
+			printf "$(Color W "*") $(Color Y "%s" "%s")\\n" "${changed_files[@]}"
 		}
 		Confirm Details
 
@@ -545,7 +548,7 @@ function AconfApply() {
       then
         Log '* %s\n' "$(Color G %q "$file")"
       else
-        LogEnter 'Installing %s...\n' "$(Color C "%q" "$file")"
+        LogEnter 'Installing %s...\n' "$(Color G "%q" "$file")"
         ParanoidConfirm ''
         InstallFile "$file"
         LogLeave ''
@@ -640,7 +643,7 @@ function AconfApply() {
 
 	if $prune_files && [[ ${#files_to_delete[@]} != 0 ]]
 	then
-		LogEnter 'Deleting %s files.\n' "$(Color G ${#files_to_delete[@]})"
+		LogEnter 'Deleting %s files.\n' "$(Color R ${#files_to_delete[@]})"
 		printf '%s\0' "${files_to_delete[@]}" | sort --zero-terminated | mapfile -d $'\0' files_to_delete
 
 		# shellcheck disable=2059
@@ -666,13 +669,11 @@ function AconfApply() {
 				# empty, and actually contain ignored files. So, skip
 				# deleting empty directories which are parents of
 				# previously-deleted objects.
-				LogEnter 'Skipping non-empty directory %s.\n' "$(Color C "%q" "$file")"
+				LogEnter 'Skipping non-empty directory %s.\n' "$(Color Y "%q" "$file")"
 			else
-        if $dry_mode
+        LogEnter 'Deleting %s...\n' "$(Color R "%q" "$file")"
+        if ! $dry_mode
         then
-          LogEnter '* %s\n' "$(Color R %q "$file")"
-        else
-          LogEnter 'Deleting %s...\n' "$(Color R "%q" "$file")"
           ParanoidConfirm ''
           sudo rm --dir "$file"
         fi
@@ -696,13 +697,13 @@ function AconfApply() {
 
 	if [[ ${#files_to_restore[@]} != 0 ]]
 	then
-		LogEnter 'Restoring %s files.\n' "$(Color G ${#files_to_restore[@]})"
+		LogEnter 'Restoring %s files.\n' "$(Color C ${#files_to_restore[@]})"
 		printf '%s\0' "${files_to_restore[@]}" | sort --zero-terminated | mapfile -d $'\0' files_to_restore
 
 		# shellcheck disable=2059
 		function Details() {
 			Log 'Restoring the following files:\n'
-			printf "$(Color W "*") $(Color A "%s" "%s")\\n" "${files_to_restore[@]}"
+			printf "$(Color W "*") $(Color Y "%s" "%s")\\n" "${files_to_restore[@]}"
 		}
 		Confirm Details
 
@@ -823,7 +824,7 @@ function AconfApply() {
 				local file="${key%:*}"
 				local value="${output_file_props[$key]:-}"
 
-				$dry_run || ApplyFileProperty "$kind" "$value" "$file"
+				$dry_mode || ApplyFileProperty "$kind" "$value" "$file"
 			done
 
 		modified=y
