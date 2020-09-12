@@ -448,12 +448,12 @@ function IgnoreStart() {
     for fn in $ignore_fn_pkg
     do
       # shellcheck disable=SC2016
-      printf '%s () { IgnorePackage "$1"; }\n' "$fn"
+      printf '%s () { IgnorePackage "$@"; }\n' "$fn"
     done
     for fn in $ignore_fn_files
     do
       # shellcheck disable=SC2016
-      printf '%s () { IgnorePath "$1"; }\n' "$fn"
+      printf '%s () { IgnorePath "$@"; }\n' "$fn"
     done
   )
 
