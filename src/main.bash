@@ -208,9 +208,11 @@ function Main() {
   # Setup default config name
   if [[ -z "$config_name" ]]; then
     config_name="host_${HOSTNAME:-local}"
+    Log 'Using default config: %s\n' "$(Color Y "$config_name")"
+
     config_dir="$dist_dir/$config_name"
     if [[ ! -d "$config_dir" ]]; then
-      Log 'Default config created for %s in %s\n' "$config_name" "$config_dir"
+      Log 'Default config created for %s in %s\n' "$config_name" "$(Color Y "$config_dir")"
       mkdir -p "$config_dir"
     fi
   else

@@ -452,7 +452,11 @@ function AconfSource ()
       # Fails by default
       AconfSourcePath "$config_name_path" "$type" "$filter" 
       ;;
-  esac || FatalError 'AconfSource: Cant find any suitable "%s/%s/%s"\n' "$config_name" "$type" "${filter:-*}"
+  esac || {
+    FatalError 'AconfSource: Cant find any suitable "%s/%s/%s"\n' \
+      "$config_name" \
+      "$type" "${filter:-*}"
+  }
 }
 
 

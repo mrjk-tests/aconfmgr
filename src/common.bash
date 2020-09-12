@@ -145,6 +145,7 @@ function AconfSourcePath ()
       method_name='SourceVars'
       pattern='vars'
       sequential=false
+      logsection=true
       ;;
     lib)
       # runmode: any
