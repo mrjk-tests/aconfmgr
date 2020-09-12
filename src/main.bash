@@ -25,6 +25,7 @@ function Usage() {
 	printf 'Usage:  %s [OPTIONS]... ACTION\n' "$0"
 	echo
 	printf 'Supported actions:\n'
+	printf '  list    List available distro\n'
 	printf '  save    Update the configuration to reflect the current state of the system\n'
 	printf '  apply   Update the system to reflect the current contents of the configuration\n'
 	printf '  check   Syntax-check and lint the configuration\n'
@@ -70,7 +71,7 @@ function Main() {
 	while [[ $# != 0 ]]
 	do
 		case "$1" in
-			save|apply|check|setup)
+			list|save|apply|check|setup)
 				if [[ -n "$aconfmgr_action" ]]
 				then
 					UsageError "An action has already been specified"
@@ -200,6 +201,24 @@ function Main() {
   config_dir="$dist_dir/$config_name"
   config_name="${config_name:-${config_dir##*/}}"
   dist_list="$config_name"
+
+  # Safety check
+  case "$aconfmgr_action" in
+    list|ls)
+			AconfDistList
+      Exit
+      ;;
+    *)
+      if [[ ! -d "$config_dir" ]]; then
+        Log 'Distro %s does not exists in directory: %s\n' \
+          "$config_name" \
+          "$dist_list"
+        Log 'Available distro\n'
+        AconfDistList
+        FatalError 'Cannot continue\n'
+      fi
+      ;;
+  esac
 
   # Save initial distro
   # shellcheck disable=SC2034

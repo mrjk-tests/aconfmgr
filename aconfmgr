@@ -24,7 +24,7 @@ fi
 
 config_name=${HOSTNAME:-local}
 dist_paths=$dist_dir
-dist_list="$config_name"
+dist_list=
 
 # shellcheck source=src/main.bash
 source "$src_dir"/main.bash

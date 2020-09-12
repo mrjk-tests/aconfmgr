@@ -86,6 +86,23 @@ ignore_parents=false
 ignore_lock=false
 ignore_status=false
 
+function AconfDistList ()
+{
+  for path in ${dist_paths//:/$'\n'}; do
+    path=$(realpath "$path" || true )
+
+    local dists_dir=$(find "$path" -mindepth 1 -maxdepth 1 -type d 2>/dev/null || true)
+    if [[ -n "$dists_dir" ]]; then
+      Log '* %s:\n' "$path"
+      for dist_dir in $dists_dir; do
+        Log '  * %-20s %s\n' "${dist_dir##*/}" "$dist_dir"
+      done
+    else
+      Log '* %s: (none)\n' "$path"
+    fi
+  done
+}
+
 function AconfDistPath ()
 {
   local new_config_name=$1
