@@ -91,7 +91,7 @@ function AconfDistList ()
   for path in ${dist_paths//:/$'\n'}; do
     path=$(realpath "$path" || true )
 
-    local dists_dir=$(find "$path" -mindepth 1 -maxdepth 1 -type d 2>/dev/null || true)
+    local dists_dir=$(find "$path" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort || true)
     if [[ -n "$dists_dir" ]]; then
       Log '* %s:\n' "$path"
       for dist_dir in $dists_dir; do
@@ -1738,6 +1738,10 @@ prompt_mode=normal # never / normal / paranoid
 function Confirm() {
 	local detail_func="$1"
 
+  if ! $dry_mode && [[ -n "$detail_func" ]]
+  then
+    $detail_func
+  fi
 	if [[ $prompt_mode == never ]]
 	then
 		return
