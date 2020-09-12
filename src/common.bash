@@ -152,16 +152,19 @@ function AconfSourcePath ()
       ;;
     state)
       # runmode: state
-      : logsection=true
+      logsection=true
       ;;
     inherit)
       # runmode: state
       method_name='SourceInherit'
       pattern='states'
       run_mode=state
+      logsection=true
 
-      if $ignore_parents || [[ "$config_name" == "$root_name" ]] ; then
+      if $ignore_parents
+      then
         Log '%s: Ignoring files and packages of %s (%s)\n' "$method_name" "$(Color C "%q" "$new_config_name/$pattern")" "$new_config_dir/$pattern.sh"
+        return
         IgnoreStart true
         ignore_lock=true
       else
@@ -175,12 +178,13 @@ function AconfSourcePath ()
       sequential=true
       logsection=true
       run_mode=setup
-      if $ignore_parents || [[ "$config_name" == "$root_name" ]] ; then
-        Log '%s: Loading dist %s ...\n' "$method_name" "$config_name"
+      if $ignore_parents
+      then
         # Simply does not execute it
-        return
-      else
         Log '%s: Ignoring %s dist setup (%s)\n' "$method_name" "$(Color C "%q" "$new_config_name/$pattern")" "$new_config_dir/$pattern.sh"
+        return
+      #else
+      #  Log '%s: Loading dist %s ...\n' "$method_name" "$config_name"
       fi
       ;;
     *) FatalError 'Unsupported import method for AconfSourcePath: %s\n' "$method" ;;

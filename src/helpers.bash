@@ -513,7 +513,7 @@ ApplyStates ()
   elif $dry_mode ; then
     Log 'ApplyStates: dry mode run check instead\n'
     Exec AconfApply
-    AconfCheck
+    AconfApply
   else
     Log 'ApplyStates: run\n'
     Exec AconfApply
