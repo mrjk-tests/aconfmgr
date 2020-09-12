@@ -163,14 +163,7 @@ function AconfSourcePath ()
       run_mode=state
       logsection=true
 
-      IgnoreStart true
-      ignore_lock=true
-     # if $ignore_parents && [[ "$new_config_dir" != "$root_dir" ]]
-     # then
-     #   Log '%s: Ignoring parent files and packages of %s (%s)\n' "$method_name" "$(Color C "%q" "$new_config_name/$pattern")" "$new_config_dir/$pattern.sh"
-      #else
-      #  Log '%s: Loading dist %s ...\n' "$method_name" "$new_config_name"
-      #fi
+      IgnoreStart "$config_name"
       ;;
     setup)
       # runmode: setup
@@ -199,7 +192,6 @@ function AconfSourcePath ()
   if [[ "$config_dir" != "$new_config_dir" ]]
   then
     # Backup current config
-    local old_ignore_status=$ignore_status
     local old_config_name="$config_name"
     old_config_dir="$config_dir"
 
@@ -265,17 +257,12 @@ function AconfSourcePath ()
   then
     config_dir="$old_config_dir"
     config_name="$old_config_name"
-    if "$ignore_lock"; then
-      ignore_lock=false
-      if [[ "$old_ignore_status" != "$ignore_status" ]]; then
-        if "$old_ignore_status"; then
-          IgnoreStart true
-        else
-          IgnoreStop true
-        fi
-      fi
-    fi
   fi
+
+  # Disable ignore mode
+  case "$method-$ignore_lock" in
+    inherit-$config_name) IgnoreStop "$config_name" ;;
+  esac
 
   $found || Log '%s: No file matched: %s (%s)\n' \
     "$method_name" \

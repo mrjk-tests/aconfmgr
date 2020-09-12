@@ -476,13 +476,18 @@ SetFileProperty TrackFile \
 function IgnoreStart() {
 	local lock="${1:-false}"
 
-  if [[ "$ignore_lock" != "$lock" ]]
-  then
-    #Log 'IgnoreStart: Locked as its in import\n'
-    return
-  elif "$ignore_status"
-  then
-    #Log 'IgnoreStart: Already On\n'
+  if [[ "$ignore_lock" != "false" ]]; then
+    if [[ "$ignore_lock" != "$lock" ]]; then
+      Log 'IgnoreStart: Locked by %s\n' "$ignore_lock"
+      return
+    fi
+  else
+    ignore_lock=$lock
+    ignore_old=$ignore_status
+  fi
+
+  if $ignore_status; then
+    Log 'IgnoreStart: Already On\n'
     return
   fi
 
@@ -510,8 +515,10 @@ function IgnoreStart() {
 
   # Override functions
   eval "$ignore_new_fn"
-  ignore_lock=$lock
   ignore_status=true
+  LogEnter 'IgnoreStart: %s (ignore_lock=%s)\n' \
+    "$(Color Y "Enabled")" \
+    "$ignore_lock"
 }
 
 #
@@ -524,21 +531,24 @@ function IgnoreStart() {
 function IgnoreStop() {
 	local lock=${1:-false}
 
-  if [[ "$ignore_lock" != "$lock" ]]
-  then
-    #Log 'IgnoreStop: Locked as its in import\n'
-    return
-  elif "$ignore_status"
-  then
-    #Log 'IgnoreStop: Already Off\n'
+  if [[ "$ignore_lock" != "false" ]]; then
+    if [[ "$ignore_lock" != "$lock" ]]; then
+      Log 'IgnoreStop: Locked by %s\n' "$ignore_lock"
+      return
+    fi
+  fi
+
+  ignore_lock=false
+  if ! $ignore_status; then
+    Log 'IgnoreStop: Already Off\n'
     return
   fi
 
+
   # Override functions
   eval "$ignore_old_fn"
-  ignore_lock=false
   ignore_status=false
-
+  LogLeave 'IgnoreStop: %s\n' "$(Color Y "Disabled")"
 }
 
 ####################################################################################################
