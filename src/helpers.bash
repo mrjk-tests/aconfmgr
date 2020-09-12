@@ -531,19 +531,62 @@ ApplyStates ()
 
 function Exec ()
 {
+  local args=$@
   if [[ $aconfmgr_run_mode != 'setup' ]]
   then
     FatalError "Exec: this directive can only be used in setup files\n"
     return 1
   fi
 
-  Log "Exec: run %s\n" "$(Color Y "%q" "$@")"
+  Log "Exec: run %s\n" "$(Color Y "%s" "$args")"
   if ! $dry_mode
   then
    "$@"
   fi
 }
 
+####################################################################################################
+
+#
+# StateSet
+#
+# Will simulate like a aconfmgr apply. Useful for setup that want to manage when 
+# the State compliance must be enforced. By default, states are applied at the
+# end of the setup, unless the --skip-setup-states is enabled.
+#
+# Note: Can only be called in setup mode, fails otherwise
+#
+
+function StateSet ()
+{
+  local key=$1
+  local var="STATE_${key}"
+  local val=${2:-${!var:-false}}
+  export "$var"="$val"
+}
+function StateRequire ()
+{
+  local key=$1
+  local var="STATE_${key}"
+
+  if [[ "${!var:-UNSET}" == UNSET ]]
+  then
+    FatalError 'State: Missing StateSet definition for %s\n' "$key"
+    Exit
+  elif [[ -z "${2-}" ]]; then
+    if [[ "${!var}" != false ]]; then
+      return 1
+    fi
+  else
+    if [[ "${!var}" == "$2" ]] || [[ "${!var}" != false ]]
+    then
+      return 0
+    fi
+  fi
+
+  FatalError 'State: Missing required state: %s is %s instead of %s\n' "$key" "${!var}" "$2"
+  return 1
+}
 
 
 : # include in coverage
