@@ -378,29 +378,30 @@ function Import ()
 #
 function AconfSource ()
 {
-  local dist=$1
+  local config_name=$1
   local type=$2
   local filter=${3-}
-  local dist_path=
+  local config_name_path=
 
   # Sanity Check
-  if ! [[ ":$dist_list:" =~ :$dist: ]]
+  if ! [[ ":$dist_list:" =~ :$config_name: ]]
   then
-    FatalError 'AconfSource: Module %s must be loaded first with a Require statement. (%s)\n' "$dist" "$dist_list"
+    FatalError 'AconfSource: Module %s must be loaded first with a Require statement. (%s)\n' "$config_name" "$dist_list"
   fi
 
-  dist_path=$(AconfDistPath "$dist" || true)
+  config_name_path=$(AconfDistPath "$config_name" || true)
   case "$type" in
     vars)
       # Vars does not fail if not found
-      AconfSourcePath "$dist_path" "$type" "$filter" || true ;;
+      AconfSourcePath "$config_name_path" "$type" "$filter" || true ;;
     unsorted)
       # Does not fail if not found
-      AconfSourcePath "$dist_path" "$type" "99-unsorted" || true ;;
+      AconfSourcePath "$config_name_path" "$type" "99-unsorted" || true ;;
     *)  #lib|state|setup|inherit)
       # Fails by default
-      AconfSourcePath "$dist_path" "$type" "$filter" ;;
-  esac || Error 'AconfSource: Cant find any suitable "%s/%s/%s"\n' "$dist" "$type" "${filter:-*}"
+      AconfSourcePath "$config_name_path" "$type" "$filter" 
+      ;;
+  esac || FatalError 'AconfSource: Cant find any suitable "%s/%s/%s"\n' "$config_name" "$type" "${filter:-*}"
 }
 
 
@@ -503,7 +504,7 @@ function IgnoreStop() {
 
 ApplyStates ()
 {
-  if $aconfmgr_run_mode != 'setup' ; then
+  if [[ $aconfmgr_run_mode != 'setup' ]]; then
     FatalError "ApplyStates: this directive can only be used in setup files\n"
     return 1
   elif $setup_skip_states; then
@@ -530,13 +531,13 @@ ApplyStates ()
 
 function Exec ()
 {
-  if $aconfmgr_run_mode != 'setup'
+  if [[ $aconfmgr_run_mode != 'setup' ]]
   then
     FatalError "Exec: this directive can only be used in setup files\n"
     return 1
   fi
 
-  Log "Exec: run %s\n" "$(Color C "%s" "$@")"
+  Log "Exec: run %s\n" "$(Color Y "%q" "$@")"
   if ! $dry_mode
   then
    "$@"

@@ -89,7 +89,7 @@ function AconfApply() {
 
     if $dry_mode
     then
-      Log 'Installing: %s... (drymode enabled)\n' "$(Color C %q "$file")"
+      Log '* %s\n' "$(Color Y %q "$file")"
       return 0
     fi
 
@@ -206,17 +206,21 @@ function AconfApply() {
 		 <( (Print0Array config_only_files ; Print0Array changed_files) | sort --zero-terminated ) | \
 		while read -r -d $'\0' file
 		do
-			LogEnter 'Installing %s...\n' "$(Color C %q "$file")"
+      if $dry_mode
+      then
+        Log '* %s\n' "$(Color Y %q "$file")"
+      else
 
-			if sudo test -e "$file"
-			then
-				Confirm Details_DiffFile
-			else
-				Confirm ''
-			fi
+        if sudo test -e "$file"
+        then
+          Confirm Details_DiffFile
+        else
+          Confirm ''
+        fi
 
-			InstallFile "$file"
-			LogLeave
+        InstallFile "$file"
+        LogLeave
+      fi
 			modified=y
 		done
 	comm -23 --zero-terminated <(Print0Array config_only_files | sort --zero-terminated) <(Print0Array priority_files | sort --zero-terminated) | mapfile -d $'\0' config_only_files
@@ -482,10 +486,15 @@ function AconfApply() {
 
 		for file in "${changed_files[@]}"
 		do
-			LogEnter 'Overwriting %s...\n' "$(Color C "%q" "$file")"
-			ParanoidConfirm Details_DiffFile
-			InstallFile "$file"
-			LogLeave ''
+      if $dry_mode
+      then
+        Log '* %s\n' "$(Color Y %q "$file")"
+      else
+        LogEnter 'Overwriting %s...\n' "$(Color C "%q" "$file")"
+        ParanoidConfirm Details_DiffFile
+        InstallFile "$file"
+        LogLeave ''
+      fi
 		done
 
 		modified=y
@@ -505,10 +514,15 @@ function AconfApply() {
 
 		for file in "${config_only_files[@]}"
 		do
-			LogEnter 'Installing %s...\n' "$(Color C "%q" "$file")"
-			ParanoidConfirm ''
-			InstallFile "$file"
-			LogLeave ''
+      if $dry_mode
+      then
+        Log '* %s\n' "$(Color Y %q "$file")"
+      else
+        LogEnter 'Installing %s...\n' "$(Color C "%q" "$file")"
+        ParanoidConfirm ''
+        InstallFile "$file"
+        LogLeave ''
+      fi
 		done
 
 		modified=y
@@ -629,11 +643,11 @@ function AconfApply() {
 			else
         if $dry_mode
         then
+          Log '* %s\n' "$(Color Y %q "$file")"
+        else
           LogEnter 'Deleting %s...\n' "$(Color C "%q" "$file")"
           ParanoidConfirm ''
           sudo rm --dir "$file"
-        else
-          LogEnter 'Deleting %s... ((drymode enabled))\n' "$(Color C "%q" "$file")"
         fi
 			fi
 

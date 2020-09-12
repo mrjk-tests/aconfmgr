@@ -199,6 +199,7 @@ function Main() {
   # Setup config
   config_dir="$dist_dir/$config_name"
   config_name="${config_name:-${config_dir##*/}}"
+  dist_list="$config_name"
 
   # Save initial distro
   # shellcheck disable=SC2034
@@ -208,6 +209,7 @@ function Main() {
   # Load configs
   AconfSourcePath "$config_dir" vars || true
   AconfSourcePath "$config_dir" lib || true
+  #Log 'DEBUG: Module:%s , Dist_LIST: (%s)\n' "$config_name" "$dist_list"
 
 	case "$aconfmgr_action" in
 		save)

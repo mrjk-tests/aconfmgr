@@ -88,28 +88,29 @@ ignore_status=false
 
 function AconfDistPath ()
 {
-  local dist=$1
+  local new_config_name=$1
 
   for path in ${dist_paths//:/$'\n'}; do
-    local dist_path="$path/$dist"
-    dist_path=$(realpath "$dist_path" || true )
-    if [[ -d "$dist_path" ]]; then
-      echo "$dist_path"
+    local new_config_dir="$path/$new_config_name"
+    new_config_dir=$(realpath "$new_config_dir" || true )
+    if [[ -d "$new_config_dir" ]]; then
+      printf "$new_config_dir\n"
       return
     fi
   done
 
-  FatalError 'Impossible to find module: %s\n' "$dist"
+  FatalError 'Impossible to find module: %s\n' "$new_config_name"
 }
 
 function AconfSourcePath ()
 {
-  local dist_path=$1
+  local new_config_dir=$1
   local method=${2}
-  local filter=${3}
+  local filter=${3-}
 
+  local new_config_name=${new_config_dir##*/}
   local found=false
-  local method_name='ImportState'
+  local method_name='SourceState'
   local pattern='states'
 
   local sequential=true
@@ -122,47 +123,47 @@ function AconfSourcePath ()
   case "$method" in
     vars)
       # runmode: any
-      method_name='ImportVars'
+      method_name='SourceVars'
       pattern='vars'
       sequential=false
       ;;
     lib)
       # runmode: any
-      method_name='ImportLibrary'
+      method_name='SourceLibary'
       pattern='lib'
       sequential=false
       ;;
     state)
       # runmode: state
-      logsection=true
+      : logsection=true
       ;;
     inherit)
       # runmode: state
-      method_name='ImportInherit'
+      method_name='SourceInherit'
       pattern='states'
-      run_mode=states
-      logsection=true
+      run_mode=state
 
-      if $ignore_parents || [[ "$dist" == "$root_name" ]] ; then
-        Log '%s: Ignoring parents ...\n' "$method_name"
-      else
-        Log '%s: Loading parents %s ...\n' "$method_name" "$dist"
+      if $ignore_parents || [[ "$config_name" == "$root_name" ]] ; then
+        Log '%s: Ignoring files and packages of %s (%s)\n' "$method_name" "$(Color C "%q" "$new_config_name/$pattern")" "$new_config_dir/$pattern.sh"
         IgnoreStart true
         ignore_lock=true
+      else
+        Log '%s: Loading dist %s ...\n' "$method_name" "$new_config_name"
       fi
       ;;
     setup)
       # runmode: setup
-      method_name='ImportSetup'
+      method_name='SourceSetup'
       pattern='setup'
       sequential=true
       logsection=true
       run_mode=setup
-      if $ignore_parents || [[ "$dist" == "$root_name" ]] ; then
-        Log '%s: Loading parents %s ...\n' "$method_name" "$dist"
-      else
-        Log '%s: Ignoring %s (%s)\n' "$method_name" "$(Color C "%q" "$dist/$pattern")" "$dist_path/$pattern.sh"
+      if $ignore_parents || [[ "$config_name" == "$root_name" ]] ; then
+        Log '%s: Loading dist %s ...\n' "$method_name" "$config_name"
+        # Simply does not execute it
         return
+      else
+        Log '%s: Ignoring %s dist setup (%s)\n' "$method_name" "$(Color C "%q" "$new_config_name/$pattern")" "$new_config_dir/$pattern.sh"
       fi
       ;;
     *) FatalError 'Unsupported import method for AconfSourcePath: %s\n' "$method" ;;
@@ -170,20 +171,21 @@ function AconfSourcePath ()
 
   # Configure exec environment
   if [[ "$run_mode" != "any" ]] && [[ "$run_mode" != "$aconfmgr_run_mode" ]]; then
-    FatalError 'Impossible to import item %s/%s/%s while in %s mode\n' "$dist" "$method" "${filter:-*}" "$run_mode"
+    FatalError 'Source: Impossible to import item %s/%s/%s while in %s mode\n' "$new_config_name" "$method" "${filter:-*}" "$run_mode current: $aconfmgr_run_mode"
   fi
 
   # Replace dist config vars
-  if [[ "$config_dir" != "$dist_path" ]]
+  local old_config_dir=
+  if [[ "$config_dir" != "$new_config_dir" ]]
   then
     # Backup current config
     local old_ignore_status=$ignore_status
-    local old_config_dir="$config_dir"
     local old_config_name="$config_name"
+    old_config_dir="$config_dir"
 
     # Apply new config
-    config_dir="$dist_path"
-    config_name="${config_dir##*/}"
+    config_dir="$new_config_dir"
+    config_name="$new_config_name"
   fi
 
   # Enable log section
@@ -193,38 +195,38 @@ function AconfSourcePath ()
   fi
 
   # Lookup file
-  if [[ -f "$dist_path/$pattern/$filter.sh" ]]; then
-    $log_enter '%s: Direct match: %s (%s)\n' "$method_name" "$(Color C "%q" "$dist/$pattern/$filter")" "$dist_path/$pattern/$filter.sh"
+  if [[ -f "$new_config_dir/$pattern/$filter.sh" ]]; then
+    $log_enter '%s: Direct match: %s (%s)\n' "$method_name" "$(Color C "%q" "$new_config_name/$pattern/$filter")" "$new_config_dir/$pattern/$filter.sh"
     # shellcheck source=/dev/null
-    source "$dist_path/$pattern/$filter.sh"
+    source "$new_config_dir/$pattern/$filter.sh"
     found=true
-    $log_leave '%s: %s done.\n' "$method_name" "$(Color C "%q" "$dist/$pattern/$filter")" 
+    $log_leave '%s: %s done.\n' "$method_name" "$(Color C "%q" "$new_config_name/$pattern/$filter")" 
 
   elif [[ -z "$filter" ]]; then
-    if [[ -f "$dist_path/$pattern.sh" ]]; then
-      $log_enter '%s: Main match: %s (%s)\n' "$method_name" "$(Color C "%q" "$dist/$pattern")" "$dist_path/$pattern.sh"
+    if [[ -f "$new_config_dir/$pattern.sh" ]]; then
+      $log_enter '%s: Main match: %s (%s)\n' "$method_name" "$(Color C "%q" "$new_config_name/$pattern")" "$new_config_dir/$pattern.sh"
       # shellcheck source=/dev/null
-      source "$dist_path/$pattern.sh"
+      source "$new_config_dir/$pattern.sh"
       found=true
-      $log_leave '%s: %s done.\n' "$method_name" "$(Color C "%q" "$dist/$pattern.sh")"
+      $log_leave '%s: %s done.\n' "$method_name" "$(Color C "%q" "$new_config_name/$pattern.sh")"
 
-    elif [[ -d "$dist_path/$pattern/" ]]; then
+    elif [[ -d "$new_config_dir/$pattern/" ]]; then
       found=true
       if $sequential; then
-        for i in "$dist_path/$pattern"/[0-9]*.sh ; do
+        for i in "$new_config_dir/$pattern"/[0-9]*.sh ; do
           [[ -f "$i" ]] || continue
-          $log_enter '%s: Ordered match: %s (ordered=%s)\n' "$method_name" "$(Color C "%q" "$dist/$pattern/$i")" "$dist_path/$pattern/$i.sh"
+          $log_enter '%s: Ordered match: %s (ordered=%s)\n' "$method_name" "$(Color C "%q" "$new_config_name/$pattern/$i")" "$new_config_dir/$pattern/$i.sh"
           # shellcheck source=/dev/null
           source "$i"
           found=true
-          $log_leave '%s: %s done.\n' "$method_name" "$(Color C "%q" "$dist/$pattern/$i")"
+          $log_leave '%s: %s done.\n' "$method_name" "$(Color C "%q" "$new_config_name/$pattern/$i")"
         done
       else
-        for i in "$dist_path/$pattern"/*.sh ; do
+        for i in "$new_config_dir/$pattern"/*.sh ; do
           local name=${i##*/}
           name=${name%%.sh}
           [[ -f "$i" ]] || continue
-          $log_enter '%s: All match: %s (%s)\n' "$method_name" "$(Color C "%q" "$dist/$pattern/$name")" "$i"
+          $log_enter '%s: All match: %s (%s)\n' "$method_name" "$(Color C "%q" "$new_config_name/$pattern/$name")" "$i"
           # shellcheck source=/dev/null
           source "$i"
           found=true
@@ -235,7 +237,7 @@ function AconfSourcePath ()
   fi
 
   # Restore config vars
-  if [[ "$config_dir" != "$dist_path" ]]
+  if [[ -n "${old_config_dir}" ]]
   then
     config_dir="$old_config_dir"
     config_name="$old_config_name"
@@ -250,6 +252,11 @@ function AconfSourcePath ()
       fi
     fi
   fi
+
+  $found || Log '%s: No file matched: %s (%s)\n' \
+    "$method_name" \
+    "$(Color C "%q" "$new_config_name/$pattern")" \
+    "$new_config_dir/$pattern.sh"
   $found
 }
 
@@ -1357,7 +1364,10 @@ function AconfInstallNative() {
 	local target_packages=("$@")
   if $dry_mode
   then
-    Log 'Install package: %s (drymode enabled)\n' "${target_packages[@]}"
+    for i in "${target_packages[@]}"
+    do
+      Log '* %s\n' "$(Color Y %q "$i")"
+    done
     return
   fi
 
@@ -1382,7 +1392,10 @@ function AconfInstallForeign() {
 	local target_packages=("$@")
   if $dry_mode
   then
-    Log 'Install foreign package: %s (drymode enabled)\n' "${target_packages[@]}"
+    for i in "${target_packages[@]}"
+    do
+      Log '* %s\n' "$(Color Y %q "$i")"
+    done
     return
   fi
 
