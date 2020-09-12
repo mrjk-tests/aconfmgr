@@ -81,7 +81,7 @@ warn_tmp_df_threshold=$((1024*1024))  # Warn on error if free space in $tmp_dir 
 ####################################################################################################
 
 # options
-ignore_parents=false
+ignore_parents=true
 # internal vars
 ignore_lock=false
 ignore_status=false
@@ -161,15 +161,14 @@ function AconfSourcePath ()
       run_mode=state
       logsection=true
 
-      if $ignore_parents
-      then
-        Log '%s: Ignoring files and packages of %s (%s)\n' "$method_name" "$(Color C "%q" "$new_config_name/$pattern")" "$new_config_dir/$pattern.sh"
-        return
-        IgnoreStart true
-        ignore_lock=true
-      else
-        Log '%s: Loading dist %s ...\n' "$method_name" "$new_config_name"
-      fi
+      IgnoreStart true
+      ignore_lock=true
+     # if $ignore_parents && [[ "$new_config_dir" != "$root_dir" ]]
+     # then
+     #   Log '%s: Ignoring parent files and packages of %s (%s)\n' "$method_name" "$(Color C "%q" "$new_config_name/$pattern")" "$new_config_dir/$pattern.sh"
+      #else
+      #  Log '%s: Loading dist %s ...\n' "$method_name" "$new_config_name"
+      #fi
       ;;
     setup)
       # runmode: setup
@@ -178,13 +177,11 @@ function AconfSourcePath ()
       sequential=true
       logsection=true
       run_mode=setup
-      if $ignore_parents
+      if $ignore_parents && [[ "$new_config_dir" != "$root_dir" ]]
       then
         # Simply does not execute it
-        Log '%s: Ignoring %s dist setup (%s)\n' "$method_name" "$(Color C "%q" "$new_config_name/$pattern")" "$new_config_dir/$pattern.sh"
+        Log '%s: Ignoring parent %s dist setup (%s)\n' "$method_name" "$(Color C "%q" "$new_config_name/$pattern")" "$new_config_dir/$pattern.sh"
         return
-      #else
-      #  Log '%s: Loading dist %s ...\n' "$method_name" "$config_name"
       fi
       ;;
     *) FatalError 'Unsupported import method for AconfSourcePath: %s\n' "$method" ;;
@@ -213,6 +210,7 @@ function AconfSourcePath ()
   if $logsection; then
     log_enter=LogEnter
     log_leave=LogLeaveSilent
+    [[ "$method" == "setup" ]] && log_leave=LogLeave || true
   fi
 
   # Lookup file

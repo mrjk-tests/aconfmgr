@@ -10,8 +10,7 @@ function AconfSetup() {
   AconfSourcePath "$config_dir" setup || true
 
   # Automagically run the system compliance
-  if ! $aconfmgr_applied
-  then
+  if ! [[ ":$config_dir:" =~ :$aconfmgr_applied: ]] ; then
     ApplyStates
   fi
 
