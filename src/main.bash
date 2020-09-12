@@ -22,7 +22,7 @@ function Usage() {
 	printf 'Written by Vladimir Panteleev <aconfmgr@thecyber%s.net>\n' "shadow"
 	printf 'https://github.com/CyberShadow/aconfmgr\n'
 	echo
-	printf 'Usage:  %s [OPTIONS]... ACTION\n' "$0"
+	printf 'Usage:  %s [OPTIONS]... ACTION [DIST]\n' "$0"
 	echo
 	printf 'Supported actions:\n'
 	printf '  list    List available distro\n'
@@ -73,14 +73,20 @@ function Main() {
 	while [[ $# != 0 ]]
 	do
 		case "$1" in
-			list|save|apply|check|setup)
+      list|ls)
+        AconfDistList
+        Exit
+        ;;
+			save|apply|check|setup)
 				if [[ -n "$aconfmgr_action" ]]
 				then
 					UsageError "An action has already been specified"
 				fi
 
 				aconfmgr_action="$1"
-				shift
+				config_name="$2"
+				shift 2
+
 				;;
 			-h|--help|help)
 				Usage
@@ -95,16 +101,13 @@ function Main() {
           dist_paths="$dist_dir:$dist_paths"
         fi
 				;;
-			-n|--dist-name)
-				config_name="$2"
-				shift 2
-				;;
 	    -p|--prune)
         prune_mode=true
         shift
         ;;
 	    -N|--dry-mode)
         dry_mode=true
+				prompt_mode=never
         shift
         ;;
 			-T|--skip-setup-states)
@@ -200,27 +203,9 @@ function Main() {
 	esac
 
   # Setup config
-  config_dir="$dist_dir/$config_name"
+  config_dir="$(AconfDistPath $config_name)"
   config_name="${config_name:-${config_dir##*/}}"
   dist_list="$config_name"
-
-  # Safety check
-  case "$aconfmgr_action" in
-    list|ls)
-			AconfDistList
-      Exit
-      ;;
-    *)
-      if [[ ! -d "$config_dir" ]]; then
-        Log 'Distro %s does not exists in directory: %s\n' \
-          "$config_name" \
-          "$dist_list"
-        Log 'Available distro\n'
-        AconfDistList
-        FatalError 'Cannot continue\n'
-      fi
-      ;;
-  esac
 
   # Save initial distro
   # shellcheck disable=SC2034
