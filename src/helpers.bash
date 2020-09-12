@@ -146,6 +146,57 @@ function CopyFileTo() {
 }
 
 #
+# TrackFile SRC-PATH [MODE [OWNER [GROUP]]]
+#
+# Copies a file from the "files" subdirectory to the output,
+# under a different name or path, but it ignore source file
+# if not already present.
+#
+# The source path should be relative to the root of the "files" subdirectory.
+# The destination path is relative to the root of the output directory.
+#
+function TrackFile ()
+{
+  local file="$1"
+  local mode="${2:-}"
+  local owner="${3:-}"
+  local group="${4:-}"
+  local src_file="$file"
+  local dst_file="$file"
+
+  if [[ "$src_file" != /* ]]
+  then
+    Log '%s: Source file path %s is not absolute.\n' \
+      "$(Color Y "Warning")" \
+      "$(Color C "%q" "$src_file")"
+    config_warnings+=1
+  fi
+
+  if [[ "$dst_file" != /* && "$dst_file" != "$src_file" ]]
+  then
+    Log '%s: Target file path %s is not absolute.\n' \
+      "$(Color Y "Warning")" \
+      "$(Color C "%q" "$dst_file")"
+    config_warnings+=1
+  fi
+
+  mkdir --parents "$(dirname "$output_dir"/files/"$dst_file")"
+
+  if [[ -e "$config_dir"/files/"$src_file" ]]; then
+    cp --no-dereference\
+       "$config_dir"/files/"$src_file"\
+       "$output_dir"/files/"$dst_file"
+  fi
+
+  SetFileProperty "$dst_file" mode  "$mode"
+  SetFileProperty "$dst_file" owner "$owner"
+  SetFileProperty "$dst_file" group "$group"
+
+  used_files["$src_file"]=y
+}
+
+
+#
 # CreateFile PATH [MODE [OWNER [GROUP]]]
 #
 # Creates an empty file, to be included in the output.
