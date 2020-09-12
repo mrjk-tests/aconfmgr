@@ -191,7 +191,7 @@ function AconfSourcePath ()
   # Enable log section
   if $logsection; then
     log_enter=LogEnter
-    log_leave=LogLeave
+    log_leave=LogLeaveSilent
   fi
 
   # Lookup file
@@ -1366,7 +1366,7 @@ function AconfInstallNative() {
   then
     for i in "${target_packages[@]}"
     do
-      Log '* %s\n' "$(Color Y %q "$i")"
+      Log '* %s\n' "$(Color G %q "$i")"
     done
     return
   fi
@@ -1394,7 +1394,7 @@ function AconfInstallForeign() {
   then
     for i in "${target_packages[@]}"
     do
-      Log '* %s\n' "$(Color Y %q "$i")"
+      Log '* %s\n' "$(Color G %q "$i")"
     done
     return
   fi
@@ -1797,7 +1797,10 @@ function LogLeave() {
 	else
 		Log "$@"
 	fi
+	log_indent=${log_indent::-1}
+}
 
+function LogLeaveSilent() {
 	log_indent=${log_indent::-1}
 }
 

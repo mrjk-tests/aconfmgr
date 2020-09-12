@@ -209,7 +209,6 @@ function Main() {
   # Load configs
   AconfSourcePath "$config_dir" vars || true
   AconfSourcePath "$config_dir" lib || true
-  #Log 'DEBUG: Module:%s , Dist_LIST: (%s)\n' "$config_name" "$dist_list"
 
 	case "$aconfmgr_action" in
 		save)

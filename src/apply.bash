@@ -89,7 +89,7 @@ function AconfApply() {
 
     if $dry_mode
     then
-      Log '* %s\n' "$(Color Y %q "$file")"
+      Log '* %s\n' "$(Color G %q "$file")"
       return 0
     fi
 
@@ -490,7 +490,7 @@ function AconfApply() {
       then
         Log '* %s\n' "$(Color Y %q "$file")"
       else
-        LogEnter 'Overwriting %s...\n' "$(Color C "%q" "$file")"
+        LogEnter 'Overwriting %s...\n' "$(Color Y "%q" "$file")"
         ParanoidConfirm Details_DiffFile
         InstallFile "$file"
         LogLeave ''
@@ -508,7 +508,7 @@ function AconfApply() {
 		# shellcheck disable=2059
 		function Details() {
 			Log 'Installing the following new files:\n'
-			printf "$(Color W "*") $(Color C "%s" "%s")\\n" "${config_only_files[@]}"
+			printf "$(Color W "*") $(Color G "%s" "%s")\\n" "${config_only_files[@]}"
 		}
 		Confirm Details
 
@@ -516,7 +516,7 @@ function AconfApply() {
 		do
       if $dry_mode
       then
-        Log '* %s\n' "$(Color Y %q "$file")"
+        Log '* %s\n' "$(Color G %q "$file")"
       else
         LogEnter 'Installing %s...\n' "$(Color C "%q" "$file")"
         ParanoidConfirm ''
@@ -619,7 +619,7 @@ function AconfApply() {
 		# shellcheck disable=2059
 		function Details() {
 			Log 'Deleting the following files:\n'
-			printf "$(Color W "*") $(Color C "%s" "%s")\\n" "${files_to_delete[@]}"
+			printf "$(Color W "*") $(Color R "%s" "%s")\\n" "${files_to_delete[@]}"
 		}
 		Confirm Details
 
@@ -643,9 +643,9 @@ function AconfApply() {
 			else
         if $dry_mode
         then
-          Log '* %s\n' "$(Color Y %q "$file")"
+          LogEnter '* %s\n' "$(Color R %q "$file")"
         else
-          LogEnter 'Deleting %s...\n' "$(Color C "%q" "$file")"
+          LogEnter 'Deleting %s...\n' "$(Color R "%q" "$file")"
           ParanoidConfirm ''
           sudo rm --dir "$file"
         fi
@@ -675,7 +675,7 @@ function AconfApply() {
 		# shellcheck disable=2059
 		function Details() {
 			Log 'Restoring the following files:\n'
-			printf "$(Color W "*") $(Color C "%s" "%s")\\n" "${files_to_restore[@]}"
+			printf "$(Color W "*") $(Color A "%s" "%s")\\n" "${files_to_restore[@]}"
 		}
 		Confirm Details
 
